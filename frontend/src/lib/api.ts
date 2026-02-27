@@ -1,7 +1,7 @@
 // Real API client — replaces mock-data.ts
-// All calls go to the FastAPI backend (default: http://localhost:8000)
+// All calls go to the FastAPI backend (default: relative URL — proxied by Nginx)
 
-export const API_BASE_URL = (import.meta.env.VITE_API_URL as string) ?? "http://localhost:8000";
+export const API_BASE_URL = (import.meta.env.VITE_API_URL as string) ?? "";
 
 // ── Shared interfaces (same shape as mock-data.ts) ─────────────────────────────
 

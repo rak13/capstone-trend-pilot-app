@@ -19,9 +19,9 @@ cd frontend && npm install
 Run these once in your terminal session before starting anything:
 
 ```bash
-export OPENAI_API_KEY=sk-...       # Required
-export DASHSCOPE_API_KEY=sk-...    # Optional — Alibaba image generation only
-export PYTHONIOENCODING=utf-8
+export OPENAI_API_KEY="sk-..."
+export DASHSCOPE_API_KEY="sk-..."
+export PYTHONIOENCODING="utf-8"
 ```
 
 ---
@@ -43,7 +43,7 @@ npm run dev
 ```
 
 - Backend → http://localhost:8000
-- Frontend → http://localhost:5173
+- Frontend → http://localhost:8080
 - Swagger → http://localhost:8000/docs
 
 Both stop when you close the terminal or press `Ctrl+C`.
@@ -77,17 +77,17 @@ tail -f frontend.log
 
 ```bash
 lsof -ti :8000    # backend PID
-lsof -ti :5173    # frontend PID
+lsof -ti :8080    # frontend PID
 ```
 
 ### Stop
 
 ```bash
 # Stop both at once
-kill $(lsof -ti :8000) $(lsof -ti :5173)
+kill $(lsof -ti :8000) $(lsof -ti :8080)
 
 # Force stop if needed
-kill -9 $(lsof -ti :8000) $(lsof -ti :5173)
+kill -9 $(lsof -ti :8000) $(lsof -ti :8080)
 ```
 
 ---
