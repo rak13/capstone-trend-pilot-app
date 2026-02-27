@@ -1,0 +1,97 @@
+sequenceDiagram
+    actor User
+    participant UI as React UI
+    participant Store as Zustand
+    participant API as FastAPI
+    participant GPT4o as GPT-4o
+    participant GT as Google Trends
+    participant Mini as GPT-4o-mini
+    participant ML as HGBR Models
+    participant VS as Visual Service
+
+    rect rgb(210,235,255)
+        Note over User,Store: ① Profile — collect bio + follower count
+        User->>UI: Enter bio + followers → "Analyze Trends"
+        UI->>API: POST /api/trends {profile_text, followers}
+        API->>GPT4o: Extract 8–12 topics from bio
+        GPT4o-->>API: [topic list]
+        loop For each uncached topic
+            API->>GT: Fetch trend score + queries
+            GT-->>API: trend_score, top_queries, rising_queries
+        end
+        API-->>UI: TrendingTopic[]
+        UI->>Store: setTrendingTopics() · setStep(2)
+    end
+
+    rect rgb(210,255,220)
+        Note over User,Store: ② Topics — pick a focus topic (or let AI choose)
+        User->>UI: Select topic card (optional) → "Generate Titles"
+        UI->>API: POST /api/post-titles {topics, profile_text, chosen_topic}
+        API->>GPT4o: Analyze rising/breakout signals → 3 post titles
+        GPT4o-->>API: SIGNAL N: … POST TITLE N: …
+        API-->>UI: PostTitle[] (parsed by regex)
+        UI->>Store: setPostTitles() · setStep(3)
+    end
+
+    rect rgb(255,245,210)
+        Note over User,Store: ③ Post Title — choose 1 of 3 titles
+        User->>UI: Select title card → "Generate Posts"
+        UI->>API: POST /api/post-variants {post_title, profile_text}
+        par Contrarian hook
+            API->>Mini: Generate post variant
+            Mini-->>API: ~150-word post
+        and Personal Transformation hook
+            API->>Mini: Generate post variant
+            Mini-->>API: ~150-word post
+        and Hidden Insight hook
+            API->>Mini: Generate post variant
+            Mini-->>API: ~150-word post
+        end
+        API-->>UI: PostVariant[3]
+        UI->>Store: setPostVariants() · setStep(4)
+    end
+
+    rect rgb(255,225,225)
+        Note over User,Store: ④ Posts — predict engagement, pick best variant
+        UI->>UI: useEffect on mount
+        par Predict variant 1
+            UI->>API: POST /api/predict {post_text, followers, post_title}
+            API->>ML: extract_features() → HGBR.predict() → expm1()
+            ML-->>API: {reactions, comments}
+            API-->>UI: EngagementPrediction
+        and Predict variant 2
+            UI->>API: POST /api/predict
+            ML-->>API: {reactions, comments}
+            API-->>UI: EngagementPrediction
+        and Predict variant 3
+            UI->>API: POST /api/predict
+            ML-->>API: {reactions, comments}
+            API-->>UI: EngagementPrediction
+        end
+        UI->>Store: setPredictions() — mark "best" by reactions+comments
+        User->>UI: Click "Select This Post"
+        UI->>Store: setFinalPost() · setStep(5)
+    end
+
+    rect rgb(235,215,255)
+        Note over User,Store: ⑤ Final — copy post + auto-generate visual
+        UI->>UI: useEffect on mount → fetchVisual()
+        UI->>API: POST /api/visual {post_text}
+        API->>VS: subprocess: visual_service.py post_text
+        VS->>VS: classify_llm() → "diagram" or "image"
+        alt Diagram
+            VS->>VS: render_graphviz(dot_code) → PNG
+        else Image
+            VS->>VS: generate_image(prompt) → PNG
+        end
+        VS-->>API: stdout JSON {type, path}
+        API->>API: base64_encode(PNG) · delete file
+        API-->>UI: {image_data: base64, content_type}
+        UI->>UI: Display post + inline image
+        opt Custom prompt entered
+            User->>UI: Type prompt → "Regenerate"
+            UI->>API: POST /api/visual {post + custom_prompt}
+            API-->>UI: New image
+        end
+        User->>UI: "Copy to Clipboard"
+    end

@@ -1,0 +1,64 @@
+flowchart LR
+    User(["👤 User\nBrowser"])
+
+    subgraph FE ["Frontend  ·  localhost:5173"]
+        React["React 18\nVite + TypeScript"]
+        Zustand["Zustand Store\n11 state slices"]
+        APIClient["API Client\nFetch + AbortController"]
+    end
+
+    subgraph BE ["Backend  ·  localhost:8000"]
+        FastAPI["FastAPI\nSwagger at /docs"]
+        subgraph Routes ["5 REST Endpoints"]
+            R1["/api/trends"]
+            R2["/api/post-titles"]
+            R3["/api/post-variants"]
+            R4["/api/predict"]
+            R5["/api/visual"]
+        end
+    end
+
+    subgraph Modules ["Python Modules"]
+        TrendMod["trend_identification_v2.py"]
+        FeatEng["feature_engineering.py\n77–80 features"]
+        EngMod["engagement_prediction/\n2× HGBR models"]
+        VisMod["visual_generation/\nLLM → diagram or image"]
+    end
+
+    subgraph Ext ["External Services"]
+        GPT4o["OpenAI GPT-4o\ntopic extraction\ntitle generation"]
+        GPTMini["OpenAI GPT-4o-mini\npost variants"]
+        GoogTrends["Google Trends\npytrends"]
+        Ollama["Ollama (local)\nLlama 3.1:8b"]
+        DashScopeChat["DashScope Chat\nqwen-plus"]
+        DashScopeImg["DashScope Images\nz-image-turbo"]
+        GVBin["Graphviz binary\nDOT → PNG"]
+    end
+
+    subgraph Storage ["Local Storage"]
+        Cache[("trend_cache.json\n7-day TTL")]
+        PklR[("hgbr_reactions.pkl\nR²=0.642")]
+        PklC[("hgbr_comments.pkl\nR²=0.616")]
+    end
+
+    User --> React
+    React <--> Zustand
+    React --> APIClient
+    APIClient <-->|"HTTP/JSON"| FastAPI
+    FastAPI --> Routes
+    R1 --> TrendMod
+    R2 --> TrendMod
+    R3 --> FastAPI
+    R4 --> FeatEng --> EngMod
+    R5 --> VisMod
+
+    TrendMod --> GoogTrends
+    TrendMod --> GPT4o
+    TrendMod <--> Cache
+    R2 --> GPT4o
+    R3 --> GPTMini
+    EngMod --> PklR & PklC
+    VisMod --> Ollama
+    VisMod --> DashScopeChat
+    VisMod --> DashScopeImg
+    VisMod --> GVBin

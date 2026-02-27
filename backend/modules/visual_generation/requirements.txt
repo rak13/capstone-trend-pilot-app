@@ -1,0 +1,4 @@
+requests>=2.31.0
+openai>=1.6.0
+graphviz>=0.20
+

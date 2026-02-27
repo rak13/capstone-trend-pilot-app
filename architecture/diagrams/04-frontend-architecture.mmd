@@ -1,0 +1,61 @@
+flowchart TD
+    subgraph Entry ["Entry Point"]
+        MainTSX["main.tsx\nReactDOM.createRoot()"]
+        AppTSX["App.tsx\nBrowserRouter\nQueryClientProvider\nToasterProvider"]
+    end
+
+    subgraph Pages ["Pages"]
+        IndexPage["pages/Index.tsx\nWizard orchestrator\nStep-conditional rendering\nLoading overlay"]
+        NotFound["pages/NotFound.tsx"]
+    end
+
+    subgraph StepComponents ["Step Components (steps/)"]
+        S1["StepProfile.tsx\n① bio textarea + followers input\nhandleAnalyze() async\nfetchTrendingTopics()"]
+        S2["StepTopics.tsx\n② trend topic cards\nselect or let AI choose\nfetchPostTitles()"]
+        S3["StepPostTitle.tsx\n③ 3 title cards\nfetchPostVariants()"]
+        S4["StepPosts.tsx\n④ 3 variant cards\nPromise.all(fetchPrediction × 3)\nbadge 'Best' on max engagement"]
+        S5["StepFinal.tsx\n⑤ final post display\nfetchVisual() on mount (auto)\ncustom prompt input + Regenerate\nCopy to Clipboard"]
+    end
+
+    subgraph Shared ["Shared Components"]
+        Stepper["ProgressStepper.tsx\n5 labelled circles\ncompleted=check, current=ring"]
+        UIKit["components/ui/\nButton, Input, Textarea\nCard, Dialog, Toast\n(shadcn/ui + Radix)"]
+        Icons["lucide-react\nicons throughout"]
+    end
+
+    subgraph State ["lib/wizard-store.ts  ·  Zustand"]
+        StoreBox["useWizardStore()"]
+        subgraph Slices ["State Slices"]
+            Nav["step: 1–5"]
+            ProfileS["profileText · followers"]
+            TopicsS["trendingTopics[] · chosenTopic"]
+            TitlesS["postTitles[] · chosenTitle"]
+            VariantsS["postVariants[] · predictions[]"]
+            FinalS["finalPost · visualImageData"]
+            LoadS["isLoading"]
+        end
+        Actions["Actions\nsetStep · setProfileText · setFollowers\nsetTrendingTopics · setChosenTopic\nsetPostTitles · setChosenTitle\nsetPostVariants · setPredictions\nsetFinalPost · setVisualImageData\nsetIsLoading · reset()"]
+    end
+
+    subgraph APILib ["lib/api.ts  ·  API Client"]
+        ApiFetch["apiFetch<T>(path, body, timeoutMs)\nAbortController · fetch() · JSON"]
+        Fns["fetchTrendingTopics()  90 s\nfetchPostTitles()       60 s\nfetchPostVariants()     60 s\nfetchPrediction()       15 s\nfetchVisual()          150 s"]
+        EnvVar["VITE_API_URL\n(from .env.local)"]
+    end
+
+    MainTSX --> AppTSX --> IndexPage
+    IndexPage -->|step=1| S1
+    IndexPage -->|step=2| S2
+    IndexPage -->|step=3| S3
+    IndexPage -->|step=4| S4
+    IndexPage -->|step=5| S5
+    IndexPage --> Stepper
+    S1 & S2 & S3 & S4 & S5 --> UIKit & Icons
+    S1 & S2 & S3 & S4 & S5 <-->|read/write| StoreBox
+    StoreBox --> Slices & Actions
+    S1 -->|fetchTrendingTopics| Fns
+    S2 -->|fetchPostTitles| Fns
+    S3 -->|fetchPostVariants| Fns
+    S4 -->|fetchPrediction × 3| Fns
+    S5 -->|fetchVisual| Fns
+    Fns --> ApiFetch --> EnvVar

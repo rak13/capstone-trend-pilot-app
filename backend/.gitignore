@@ -1,0 +1,25 @@
+# Secrets (actual keys — copy values into .env when needed)
+.env.secrets
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Generated outputs (visual service)
+modules/visual_generation/output/*.png
+modules/visual_generation/output/*.jpg
+modules/visual_generation/output/*.dot
+modules/visual_generation/service/visual_service.log
+
+# Trend cache (regenerated at runtime)
+trend_cache.json

@@ -1,0 +1,36 @@
+flowchart TD
+    Reset(["reset()\ninitial state"])
+
+    subgraph Step1 ["Step 1 — Profile"]
+        SetPT["setProfileText(bio)"]
+        SetFL["setFollowers(n)"]
+        SetTT["setTrendingTopics(TrendingTopic[])"]
+    end
+
+    subgraph Step2 ["Step 2 — Topics"]
+        SetCT["setChosenTopic(topic | null)"]
+        SetPTitles["setPostTitles(PostTitle[])"]
+    end
+
+    subgraph Step3 ["Step 3 — Post Title"]
+        SetCTitle["setChosenTitle(title)"]
+        SetPV["setPostVariants(PostVariant[])"]
+    end
+
+    subgraph Step4 ["Step 4 — Posts"]
+        SetPred["setPredictions(EngagementPrediction[])"]
+        SetFP["setFinalPost(postText)"]
+    end
+
+    subgraph Step5 ["Step 5 — Final"]
+        SetVID["setVisualImageData(base64 | null)"]
+    end
+
+    Nav["setStep(1→2→3→4→5)"]
+    Loading["setIsLoading(true|false)"]
+
+    Reset --> Step1 --> Nav --> Step2 --> Nav --> Step3 --> Nav --> Step4 --> Nav --> Step5
+
+    style Reset fill:#f0f0f0
+    style Nav fill:#e8f4e8
+    style Loading fill:#fff3cd

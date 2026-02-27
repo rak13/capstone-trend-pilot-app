@@ -1,0 +1,47 @@
+flowchart LR
+    subgraph BackendStack ["Backend Stack"]
+        direction TB
+        FastAPIBox["FastAPI 0.111+\nREST framework"]
+        UvicornBox["Uvicorn 0.29+\nASGI server"]
+        PydanticBox["Pydantic v2\nRequest/response schemas"]
+        NumpyBox["NumPy 1.26+\nVector operations"]
+        PandasBox["Pandas 2.0+\nDataFrame processing"]
+        ScikitBox["scikit-learn 1.4+\nHGBR model class"]
+        JoblibBox["joblib 1.3+\n.pkl serialization"]
+        PytrendsBox["pytrends 4.9+\nGoogle Trends client"]
+        OpenAIBox["openai 1.6+\nGPT-4o + GPT-4o-mini"]
+        GraphvizBox["graphviz 0.20+\nDOT → PNG (Python wrapper)"]
+        DotenvBox["python-dotenv\nenv var loading"]
+    end
+
+    subgraph FrontendStack ["Frontend Stack"]
+        direction TB
+        ReactBox["React 18.3\nComponent framework"]
+        TSBox["TypeScript 5.8\nStatic typing"]
+        ViteBox["Vite 5.4\nBundler + HMR"]
+        RRBox["React Router 6.30\nClient-side routing"]
+        ZustandBox["Zustand 5.0\nLightweight state"]
+        ShadcnBox["shadcn/ui\nRadix UI primitives"]
+        TailwindBox["Tailwind CSS 3.4\nUtility-first styling"]
+        LucideBox["lucide-react 0.462\nIcon set"]
+        SonnerBox["Sonner 1.7\nToast notifications"]
+        RHFBox["React Hook Form\n+ Zod validation"]
+    end
+
+    subgraph ExternalStack ["External Services"]
+        direction TB
+        OAI_S["OpenAI API\nGPT-4o · GPT-4o-mini"]
+        GT_S["Google Trends\npytrends (no key needed)"]
+        OLL_S["Ollama (local)\nLlama 3.1:8b\nClassify diagram/image"]
+        DS_S["Alibaba DashScope\nChat (qwen-plus)\nImage (z-image-turbo)"]
+        GV_S["Graphviz binary\ncross-platform\nDOT renderer"]
+        SD_S["Stable Diffusion\noptional local GPU"]
+    end
+
+    subgraph MLStack ["ML / Data"]
+        direction TB
+        HGBR_S["HistGradientBoostingRegressor\n2 models (reactions, comments)\ntrained on 786 LinkedIn posts"]
+        FE_S["Feature Engineering\n77–80 hand-crafted features\nregex, NLP, structural"]
+        LOO_S["Leave-One-Out Stats\nauthor baseline normalisation"]
+        LOG_S["log1p/expm1\nskew-correction transforms"]
+    end

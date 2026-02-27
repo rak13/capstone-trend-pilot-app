@@ -1,0 +1,36 @@
+flowchart TD
+    Fn["extract_features(post_text, followers, post_title, loo_mean)"]
+
+    subgraph AuthorGroup ["Author (3)"]
+        AF["log_followers = log1p(followers)\nauthor_loo_log_mean = loo_mean param\nauthor_post_count = 1 fixed"]
+    end
+
+    subgraph TextGroup ["Text Stats (21)"]
+        TF["char_count · word_count · sentence_count\nline_count · line_break_count\navg_word_length · avg_sentence_length\npost_density · is_long_form\nfirst_line_words · first_line_short\nnum_exclamations · num_questions\nhas_exclamation · has_question\nnum_caps_words · num_numbers · has_numbers\nbullet_count · has_bullets · has_numbered_list"]
+    end
+
+    subgraph HookGroup ["Hooks (8)"]
+        HF["hook_score (0–15)\n  never narrative = 15\n  specific time = 12\n  quote hook = 10\n  contrarian = 7\n  belief transformation = 6\nhas_announcement_hook\nhas_question_hook\nhas_personal_hook\nstarts_with_number"]
+    end
+
+    subgraph PowerGroup ["Power Patterns (16)"]
+        PF["has_underdog · has_transformation · has_cta_question\nhas_hidden_truth · has_vulnerability · has_family\nhas_specific_time_content · has_specific_numbers\nhas_adversity_learning · has_value_promise\nhas_list_format · has_contrast · has_aspirational\nhas_direct_address · has_personal_story\npower_pattern_count · power_pattern_score\npersonal_story_score"]
+    end
+
+    subgraph TopicGroup ["Topics (7)"]
+        TPC["topic_tech · topic_business\ntopic_career · topic_leadership\ntopic_personal_dev · topic_finance\ntopic_count · is_multi_topic"]
+    end
+
+    subgraph PromoGroup ["Promotional (4)"]
+        PR["promotional_score (keyword points)\nis_promotional (score >= 2)\nis_heavy_promo (score >= 6)\nis_low_effort_link (wc<80 + link + pp<2)"]
+    end
+
+    subgraph OtherGroup ["Other Groups"]
+        OT["Hashtags (4): num_hashtags · has_hashtags · hashtag_bucket\nEmojis (3): emoji_count · unique · has_emoji\nLinks (3): num_content_links · has_external · link_penalty (-18)\nMedia (8): is_post · has_video · has_carousel · media_score\nStyle (5): quote_marks · parentheses · mention_count\nHeadline (2): headline_word_count · headline_has_emoji\nInteraction Terms (7): log_followers×vuln · loo×base_score · hook×power"]
+    end
+
+    subgraph CompositeGroup ["Composite Score"]
+        CS["base_score = max(0, min(100,\n  50 + length_score + hook_score\n  + power_score + link_penalty\n  + pattern_density - promo_penalty))"]
+    end
+
+    Fn --> AuthorGroup & TextGroup & HookGroup & PowerGroup & TopicGroup & PromoGroup & OtherGroup & CompositeGroup

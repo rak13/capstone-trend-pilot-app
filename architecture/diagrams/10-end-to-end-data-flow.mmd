@@ -1,0 +1,24 @@
+flowchart TD
+    RAW["Raw Input\nprofileText: string (bio)\nfollowers: number"]
+
+    TOPICS["TrendingTopic[]\ntopic: string\ntrendScore: float\ntopQueries: string[]\nrisingQueries: {query,value}[]"]
+
+    TITLES["PostTitle[]\nsignal: string\ntitle: string"]
+
+    VARIANTS["PostVariant[]\nhookStyle: Contrarian|Personal|Hidden\npostText: string (100–200 words)\nwordCount: number"]
+
+    PREDS["EngagementPrediction[]\nreactions: int\ncomments: int\n(per variant)"]
+
+    BEST["finalPost: string\n(user-selected variant)"]
+
+    VISUAL["VisualResult\nimage_data: base64 string\ncontent_type: image/png"]
+
+    DISPLAY["Rendered Output\nPost text + inline image\nCopy to clipboard"]
+
+    RAW -->|"GPT-4o → Google Trends\n(20–60 s)"| TOPICS
+    TOPICS -->|"GPT-4o signal analysis\n(30–60 s)"| TITLES
+    TITLES -->|"GPT-4o-mini × 3 hooks\n(10–20 s)"| VARIANTS
+    VARIANTS -->|"HGBR ML models × 3\n(<1 s each)"| PREDS
+    PREDS -->|"User picks best"| BEST
+    BEST -->|"Visual Service subprocess\n(up to 120 s)"| VISUAL
+    BEST & VISUAL --> DISPLAY

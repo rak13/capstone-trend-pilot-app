@@ -1,0 +1,45 @@
+flowchart LR
+    subgraph IN ["Inputs"]
+        PT["post_text"]
+        FL["followers"]
+        TTL["post_title"]
+        LM["global_loo_log_mean\n(loo_stats_*.json)"]
+    end
+
+    subgraph FE ["extract_features()  ·  77–80 features"]
+        direction TB
+        A["Author (3)\nlog_followers\nauthor_loo_log_mean"]
+        B["Text Stats (21)\nword_count · char_count\nlexical_diversity · ..."]
+        C["Hashtags (4)\nnum_hashtags · bucket"]
+        D["Emojis (3)\nemoji_count · unique"]
+        E["Hooks (8)\nhook_score 0–15\nhas_announcement · ..."]
+        F["Power Patterns (16)\nhas_transformation\nhas_vulnerability · ..."]
+        G["Topics (7)\ntopic_tech · topic_ai\ntopic_career · ..."]
+        H["Promotional (4)\npromotional_score\nis_heavy_promo"]
+        I["Interaction Terms (7)\nlog_followers × has_vuln\nloo × base_score · ..."]
+        J["Links (3) · Media (8)\nHeadline (2) · Style (5)"]
+    end
+
+    subgraph ORDER ["Feature Ordering"]
+        FNR["feature_names_reactions.json\n77 names → numpy[1×77]"]
+        FNC["feature_names_comments.json\n80 names → numpy[1×80]"]
+    end
+
+    subgraph MODELS ["HGBR Models (loaded at startup)"]
+        MR["hgbr_reactions.pkl\nHistGradientBoostingRegressor\nloss=absolute_error\nlr=0.05 · max_iter=500\nR²=0.642, MAE=58 reactions"]
+        MC["hgbr_comments.pkl\nHistGradientBoostingRegressor\nloss=absolute_error\nlr=0.05 · max_iter=500\nR²=0.616, MAE=8.9 comments"]
+    end
+
+    subgraph BACK ["Back-Transform"]
+        ER["expm1(pred_r)\n→ max(0, round())"]
+        EC["expm1(pred_c)\n→ max(0, round())"]
+    end
+
+    OUT(["{\n  reactions: int,\n  comments: int\n}"])
+
+    IN --> FE
+    FE --> A & B & C & D & E & F & G & H & I & J
+    A & B & C & D & E & F & G & H & I & J --> ORDER
+    FNR --> MR --> ER
+    FNC --> MC --> EC
+    ER & EC --> OUT

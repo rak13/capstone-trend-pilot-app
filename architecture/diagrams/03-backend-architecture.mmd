@@ -1,0 +1,84 @@
+flowchart TD
+    subgraph Startup ["Startup Sequence"]
+        LD["load_dotenv()\nread OPENAI_API_KEY\nDASHSCOPE_API_KEY"]
+        CD["os.chdir(backend/)\ntargets trend_cache.json here"]
+        SP["sys.path.insert(modules/)"]
+        LC["@lifespan — load at startup\njoblib.load(hgbr_reactions.pkl)\njoblib.load(hgbr_comments.pkl)\njson.load(feature_names × 2)\njson.load(loo_stats × 2)"]
+    end
+
+    subgraph App ["FastAPI App  ·  port 8000"]
+        CORS["CORSMiddleware\nallow_origins=*"]
+        GET_H["GET /  →  health check"]
+        POST_1["POST /api/trends\nTrendsRequest\n⏱ 20–60 s"]
+        POST_2["POST /api/post-titles\nPostTitlesRequest\n⏱ 30–60 s"]
+        POST_3["POST /api/post-variants\nPostVariantsRequest\n⏱ 10–20 s"]
+        POST_4["POST /api/predict\nPredictRequest\n⏱ <1 s"]
+        POST_5["POST /api/visual\nVisualRequest\n⏱ up to 120 s"]
+    end
+
+    subgraph Helpers ["Inline Helpers (main.py)"]
+        ParseTitles["parse_post_titles(llm_output)\nregex: SIGNAL N / POST TITLE N"]
+        BuildPrompt["_build_user_prompt(topic, profile, hook)"]
+        DoPredict["_do_predict(post, followers, title)\nextract_features() → model.predict() → expm1()"]
+        HookStyles["HOOK_STYLES[3]\nContrarian / Personal / Hidden"]
+        MasterPrompt["MASTER_SYSTEM_PROMPT\n100–200 words, no links, authentic"]
+    end
+
+    subgraph TrendMod ["modules/trend_identification_v2.py"]
+        GetTrends["get_trending_topics(profile_text)\n→ sorted DataFrame"]
+        SelectTopic["select_post_topic(df, profile, topic)\n→ formatted LLM string"]
+        CacheRW[("trend_cache.json\n7-day TTL\nkey=topic")]
+    end
+
+    subgraph FeatMod ["helpers/feature_engineering.py"]
+        ExtractFeat["extract_features(\n  post_text, followers,\n  post_title, loo_mean\n) → dict[77–80 keys]"]
+    end
+
+    subgraph EngMod ["modules/engagement_prediction/"]
+        HGBR_R[("hgbr_reactions.pkl\nR²=0.642\nSpearman ρ=0.71")]
+        HGBR_C[("hgbr_comments.pkl\nR²=0.616\nSpearman ρ=0.80")]
+        FN_R[("feature_names_reactions.json\n77 ordered names")]
+        FN_C[("feature_names_comments.json\n80 ordered names")]
+        LOO[("loo_stats_*.json\nglobal_log_mean")]
+    end
+
+    subgraph VisMod ["modules/visual_generation/"]
+        Cfg["config.py\nOLLAMA_API_URL, MODEL\nDASHSCOPE_API_KEY, MODELS\nOUTPUT_DIR"]
+        VisSvc["service/visual_service.py\nCLI subprocess entry point"]
+        ClassLLM["llm/classify_llm.py\nprompt → {type, dot_code|prompt}"]
+        QueryLLM["llm/query_llm.py\nOllama or Alibaba dispatcher"]
+        RenderGV["gv_diagram/render_graphviz.py\nDOT → Graphviz binary → PNG"]
+        GenImg["image/generate_image.py\nSD or DashScope → PNG"]
+    end
+
+    subgraph Ext ["External APIs"]
+        OAI["OpenAI\nGPT-4o / GPT-4o-mini"]
+        GTrends["pytrends\nGoogle Trends"]
+        OLL["Ollama :11434\nLlama 3.1:8b"]
+        DSChat["DashScope\nqwen-plus"]
+        DSImg["DashScope\nz-image-turbo"]
+        GVBin["graphviz binary"]
+    end
+
+    LD --> CD --> SP --> App
+    LC --> HGBR_R & HGBR_C & FN_R & FN_C & LOO
+
+    POST_1 --> GetTrends --> GTrends & OAI
+    GetTrends <--> CacheRW
+
+    POST_2 --> SelectTopic --> OAI
+    SelectTopic --> ParseTitles
+
+    POST_3 --> HookStyles --> BuildPrompt --> OAI
+    MasterPrompt --> POST_3
+
+    POST_4 --> DoPredict --> ExtractFeat --> HGBR_R & HGBR_C
+    FN_R --> HGBR_R
+    FN_C --> HGBR_C
+    LOO --> ExtractFeat
+
+    POST_5 -->|subprocess| VisSvc --> ClassLLM --> QueryLLM
+    QueryLLM --> OLL & DSChat
+    ClassLLM -->|diagram| RenderGV --> GVBin
+    ClassLLM -->|image| GenImg
+    GenImg --> DSImg

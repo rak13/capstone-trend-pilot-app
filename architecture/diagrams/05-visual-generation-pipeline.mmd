@@ -1,0 +1,53 @@
+flowchart TD
+    Input(["POST /api/visual\n{post_text}"])
+
+    Sub["subprocess.run(\n  visual_service.py  post_text\n  cwd=service/, timeout=120s\n)"]
+
+    CaptureOut["capture stdout\nfind last JSON line"]
+
+    Classify["classify_llm(user_input)\nllm/classify_llm.py"]
+
+    LLMRoute{"LLM backend\n(config.py)"}
+
+    Ollama["send_ollama_prompt()\nPOST localhost:11434/api/generate\nmodel: llama3.1:8b"]
+    Alibaba["send_alibaba_prompt()\nDashScope OpenAI-compat API\nmodel: qwen-plus"]
+
+    ParseResp["Parse LLM JSON response\n(strict → regex fallback)\nlog raw to llm_raw_response.log"]
+
+    TypeCheck{"type?"}
+
+    DiagPath["type = 'diagram'\nextract DOT code\nbetween markers"]
+    ImgPath["type = 'image'\nextract optimized\nSD/Alibaba prompt"]
+    NonePath["type = 'none'\nor parse failure"]
+
+    RenderGV["render_graphviz(dot_code)\nSanitize JSON escapes\ngraphviz.Source().render()\nformat=png"]
+    GVBin["Graphviz binary\ndot / neato / circo"]
+
+    GenImg["generate_image(prompt)"]
+    ImgRoute{"image provider"}
+    SD["generate_stable_diffusion_image()\nHugging Face pipeline\nlocal GPU/CPU"]
+    AliImg["generate_alibaba_image()\nPOST DashScope image API\nmodel: z-image-turbo\nsize: 1024×1024\ndownload URL → file"]
+
+    PNGFile[("PNG file\nOUTPUT_DIR/")]
+
+    ReadEncode["Read bytes\nbase64.b64encode()\nos.remove(file)  cleanup"]
+
+    Success(["Return\n{\n  image_data: base64,\n  content_type: image/png,\n  error: null\n}"])
+
+    NoneResp(["Return\n{\n  image_data: null,\n  error: 'No visual generated'\n}"])
+
+    ErrResp(["HTTP 500/504\nif subprocess crash\nor timeout"])
+
+    Input --> Sub -->|stdout| CaptureOut --> Classify
+    Classify --> LLMRoute
+    LLMRoute -->|ollama| Ollama --> ParseResp
+    LLMRoute -->|alibaba| Alibaba --> ParseResp
+    ParseResp --> TypeCheck
+    TypeCheck --> DiagPath & ImgPath & NonePath
+    DiagPath --> RenderGV --> GVBin --> PNGFile
+    ImgPath --> GenImg --> ImgRoute
+    ImgRoute -->|stable_diffusion| SD --> PNGFile
+    ImgRoute -->|alibaba| AliImg --> PNGFile
+    PNGFile --> ReadEncode --> Success
+    NonePath --> NoneResp
+    Sub -->|crash / timeout| ErrResp
