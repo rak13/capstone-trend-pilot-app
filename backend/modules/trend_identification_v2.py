@@ -15,9 +15,6 @@ TIMEFRAME = "today 3-m"   # last 3 months
 
 client = OpenAI()  # reads OPENAI_API_KEY from env
 
-# GOOGLE TRENDS SETUP
-pytrends = TrendReq(hl="en-US", tz=360)
-
 # CACHE HANDLING
 def load_cache():
     if not os.path.exists(CACHE_FILE):
@@ -71,6 +68,7 @@ LinkedIn Bio:
 # GOOGLE TRENDS FETCH
 def fetch_trend_data(keyword):
     """Fetch trend score and related queries in a single payload build."""
+    pytrends = TrendReq(hl="en-US", tz=360)
     pytrends.build_payload([keyword], timeframe=TIMEFRAME, geo=GEO)
 
     # Trend score
