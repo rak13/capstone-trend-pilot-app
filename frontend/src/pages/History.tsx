@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Rocket, ArrowLeft, MessageSquare, ThumbsUp, Clock, FileText } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Rocket, ArrowLeft, MessageSquare, ThumbsUp, Clock, FileText, LogOut } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 import { useAuthStore } from "@/lib/auth-store";
 import { fetchUserPosts, type SavedPost } from "@/lib/auth-api";
 
@@ -13,117 +13,132 @@ const History = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!token) {
-      navigate("/login");
-      return;
-    }
+    if (!token) { navigate("/login"); return; }
     fetchUserPosts(token)
       .then(setPosts)
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load posts."))
       .finally(() => setLoading(false));
   }, [token, navigate]);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
+  const handleLogout = () => { logout(); navigate("/login"); };
 
   const formatDate = (dateStr: string) => {
     try {
-      return new Date(dateStr + "Z").toLocaleString(undefined, {
-        dateStyle: "medium",
-        timeStyle: "short",
-      });
-    } catch {
-      return dateStr;
-    }
+      return new Date(dateStr + "Z").toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+    } catch { return dateStr; }
   };
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+      <header
+        className="border-b border-border/50 sticky top-0 z-50"
+        style={{ background: "rgba(27,27,27,0.85)", backdropFilter: "blur(16px)" }}
+      >
+        <div className="container max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center">
-              <Rocket className="w-5 h-5 text-primary-foreground" />
+            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center glow-primary">
+              <Rocket className="w-4 h-4 text-white" />
             </div>
-            <div>
-              <h1 className="text-lg font-display font-bold text-foreground leading-tight">TrendPilot</h1>
-              <p className="text-xs text-muted-foreground">LinkedIn Post Creator</p>
-            </div>
+            <span className="text-base font-display font-semibold text-foreground tracking-tight">TrendPilot</span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground hidden sm:block">{user?.name}</span>
-            <Button variant="outline" size="sm" onClick={() => navigate("/")}>
-              <ArrowLeft className="w-4 h-4 mr-1" /> Create Post
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground">
-              Sign Out
-            </Button>
+
+          <div className="flex items-center gap-1">
+            {user && (
+              <span className="text-sm text-muted-foreground hidden sm:block mr-3">{user.name}</span>
+            )}
+            <button
+              onClick={() => navigate("/")}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+                text-muted-foreground hover:text-foreground hover:bg-white/5
+                transition-all duration-200"
+            >
+              <ArrowLeft className="w-4 h-4" /> Create Post
+            </button>
+            <ThemeToggle />
+            <button onClick={handleLogout} aria-label="Sign out"
+              className="w-9 h-9 rounded-lg flex items-center justify-center
+                text-muted-foreground hover:text-foreground hover:bg-white/5
+                transition-all duration-200"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="container max-w-5xl mx-auto px-4 py-8">
+      <main className="container max-w-5xl mx-auto px-6 py-10">
         <div className="mb-8">
-          <h2 className="text-2xl font-display font-bold text-foreground mb-1">My Posts</h2>
-          <p className="text-muted-foreground">All posts you've published through TrendPilot.</p>
+          <h2 className="text-3xl font-display font-semibold text-foreground mb-2 tracking-tight">My Posts</h2>
+          <p className="text-base text-muted-foreground">All posts you've published through TrendPilot.</p>
         </div>
 
         {loading && (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <div className="flex items-center justify-center py-24">
+            <div className="w-8 h-8 border-2 border-primary/25 border-t-primary rounded-full animate-spin" />
           </div>
         )}
 
         {error && (
-          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-destructive text-sm">
+          <div className="bg-destructive/10 border border-destructive/25 rounded-xl p-5 text-base text-destructive">
             {error}
           </div>
         )}
 
         {!loading && !error && posts.length === 0 && (
-          <div className="text-center py-20">
-            <FileText className="w-12 h-12 text-muted-foreground/40 mx-auto mb-4" />
-            <p className="text-muted-foreground font-medium">No posts yet.</p>
-            <p className="text-sm text-muted-foreground mt-1">Create your first post with the wizard!</p>
-            <Button className="mt-4 gradient-primary text-primary-foreground hover:opacity-90" onClick={() => navigate("/")}>
+          <div className="text-center py-24">
+            <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-5">
+              <FileText className="w-6 h-6 text-muted-foreground" />
+            </div>
+            <p className="text-base font-medium text-foreground mb-1.5">No posts yet</p>
+            <p className="text-sm text-muted-foreground mb-7">Create your first post with the wizard.</p>
+            <button
+              onClick={() => navigate("/")}
+              className="px-6 py-3 rounded-lg text-base font-medium text-white
+                gradient-primary glow-primary hover:opacity-90 transition-all"
+            >
               Create a Post
-            </Button>
+            </button>
           </div>
         )}
 
         {!loading && posts.length > 0 && (
           <div className="space-y-4">
-            {posts.map((post) => (
-              <div key={post.id} className="bg-card border border-border rounded-xl p-6">
-                <div className="flex items-start justify-between gap-4 mb-3">
+            {posts.map((post, idx) => (
+              <article
+                key={post.id}
+                className="bg-card border border-border/50 rounded-xl p-6 hover:border-border
+                  transition-all duration-200 animate-fade-in"
+                style={{ animationDelay: `${idx * 50}ms` }}
+              >
+                <div className="flex items-start justify-between gap-5 mb-4">
                   <div className="flex-1 min-w-0">
                     {post.title && (
-                      <p className="font-display font-semibold text-foreground mb-1 truncate">{post.title}</p>
+                      <p className="text-base font-display font-semibold text-foreground mb-1.5 leading-snug">
+                        {post.title}
+                      </p>
                     )}
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                       <Clock className="w-3.5 h-3.5" />
                       <span>{formatDate(post.created_at)}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground shrink-0">
-                    <span className="flex items-center gap-1">
-                      <ThumbsUp className="w-4 h-4" />
+                    <span className="flex items-center gap-1.5">
+                      <ThumbsUp className="w-4 h-4 text-primary/60" />
                       {post.reactions}
                     </span>
-                    <span className="flex items-center gap-1">
-                      <MessageSquare className="w-4 h-4" />
+                    <span className="flex items-center gap-1.5">
+                      <MessageSquare className="w-4 h-4 text-accent/60" />
                       {post.comments}
                     </span>
                   </div>
                 </div>
-                <div className="bg-muted/50 rounded-md p-4">
-                  <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed line-clamp-6">
+                <div className="bg-secondary/35 rounded-lg p-4 border border-border/30">
+                  <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed line-clamp-6">
                     {post.content}
                   </p>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         )}

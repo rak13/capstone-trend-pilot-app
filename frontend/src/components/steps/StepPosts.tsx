@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useWizardStore } from "@/lib/wizard-store";
 import { fetchPrediction } from "@/lib/api";
-import { Button } from "@/components/ui/button";
 import { ArrowLeft, Heart, MessageCircle, Trophy } from "lucide-react";
 
 const StepPosts = () => {
@@ -11,78 +10,66 @@ const StepPosts = () => {
 
   useEffect(() => {
     if (predictions.length === 0) {
-      const fetchAll = async () => {
-        try {
-          const preds = await Promise.all(
-            postVariants.map((v) => fetchPrediction(v.postText, followers, chosenTitle ?? ""))
-          );
-          setPredictions(preds);
-        } catch (err) {
-          setPredError(err instanceof Error ? err.message : "Failed to run engagement prediction.");
-        } finally {
-          setLoadingPreds(false);
-        }
-      };
-      fetchAll();
+      Promise.all(postVariants.map((v) => fetchPrediction(v.postText, followers, chosenTitle ?? "")))
+        .then(setPredictions)
+        .catch((err) => setPredError(err instanceof Error ? err.message : "Failed to run engagement prediction."))
+        .finally(() => setLoadingPreds(false));
     }
   }, []);
 
-  const handleSelect = (idx: number) => {
-    setFinalPost(postVariants[idx].postText);
-    setStep(5);
-  };
-
-  // Find best variant
   const bestIdx = predictions.length > 0
-    ? predictions.reduce((best, p, i) => (p.reactions + p.comments > predictions[best].reactions + predictions[best].comments ? i : best), 0)
+    ? predictions.reduce((best, p, i) =>
+        p.reactions + p.comments > predictions[best].reactions + predictions[best].comments ? i : best, 0)
     : -1;
 
   return (
-    <div className="animate-fade-in max-w-5xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-2xl font-display font-bold text-foreground mb-2">Compare Posts & Engagement</h2>
-        <p className="text-muted-foreground">
-          <span className="font-medium text-foreground">{chosenTitle}</span>
-          <br />Three hook styles generated. Engagement predicted by our model.
+    <div className="animate-fade-in max-w-4xl mx-auto">
+      <div className="mb-8">
+        <h2 className="text-3xl font-display font-semibold text-foreground mb-3 tracking-tight">Compare Posts</h2>
+        <p className="text-base text-muted-foreground">
+          <span className="text-foreground font-medium">{chosenTitle}</span>
+          <span className="mx-2 text-border">·</span>
+          Three hook styles. Engagement predicted by our model.
         </p>
       </div>
 
       {predError && (
-        <p className="text-destructive text-sm font-medium mb-4">{predError}</p>
+        <p className="text-sm text-destructive bg-destructive/10 border border-destructive/25 rounded-lg px-4 py-2.5 mb-5">
+          {predError}
+        </p>
       )}
 
       {loadingPreds ? (
-        <div className="flex items-center justify-center py-20">
+        <div className="flex items-center justify-center py-24">
           <div className="text-center">
-            <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground font-medium">Running engagement prediction model…</p>
+            <div className="w-9 h-9 border-2 border-primary/25 border-t-primary rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-base text-muted-foreground">Running engagement prediction model…</p>
           </div>
         </div>
       ) : (
         <>
-          {/* Summary bar */}
+          {/* Summary row */}
           <div className="grid grid-cols-3 gap-3 mb-6">
             {postVariants.map((v, i) => (
-              <div
-                key={i}
-                className={`p-3 rounded-lg border text-center transition-all ${
-                  bestIdx === i ? "border-accent bg-accent/5" : "border-border bg-card"
+              <div key={i}
+                className={`p-4 rounded-xl border text-center transition-all ${
+                  bestIdx === i ? "border-accent/40 bg-accent/8" : "border-border/50 bg-card"
                 }`}
               >
-                <p className="text-xs font-medium text-muted-foreground mb-1">{v.hookStyle}</p>
-                <div className="flex items-center justify-center gap-3">
-                  <span className="flex items-center gap-1 text-sm font-semibold text-foreground">
-                    <Heart className="w-3.5 h-3.5 text-destructive" />
-                    {predictions[i]?.reactions}
+                <p className="text-sm font-medium text-muted-foreground mb-2">{v.hookStyle}</p>
+                <div className="flex items-center justify-center gap-4">
+                  <span className="flex items-center gap-1.5 text-base font-semibold text-foreground">
+                    <Heart className="w-3.5 h-3.5 text-rose-500" />
+                    {predictions[i]?.reactions ?? "—"}
                   </span>
-                  <span className="flex items-center gap-1 text-sm font-semibold text-foreground">
+                  <span className="flex items-center gap-1.5 text-base font-semibold text-foreground">
                     <MessageCircle className="w-3.5 h-3.5 text-primary" />
-                    {predictions[i]?.comments}
+                    {predictions[i]?.comments ?? "—"}
                   </span>
                 </div>
                 {bestIdx === i && (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-accent mt-1">
-                    <Trophy className="w-3 h-3" /> Best
+                  <span className="inline-flex items-center gap-1 text-sm font-medium text-accent mt-2">
+                    <Trophy className="w-3.5 h-3.5" /> Best
                   </span>
                 )}
               </div>
@@ -90,36 +77,35 @@ const StepPosts = () => {
           </div>
 
           {/* Variant cards */}
-          <div className="space-y-4 mb-6">
+          <div className="space-y-4 mb-8">
             {postVariants.map((v, i) => (
-              <div
-                key={i}
-                className={`p-5 rounded-lg border-2 bg-card transition-all ${
-                  bestIdx === i ? "border-accent/50" : "border-border"
+              <div key={i}
+                className={`p-5 rounded-xl border bg-card transition-all ${
+                  bestIdx === i ? "border-accent/40" : "border-border/50"
                 }`}
               >
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-display font-semibold text-foreground">
+                  <div className="flex items-center gap-2.5">
+                    <h3 className="text-base font-display font-semibold text-foreground">
                       Variant {i + 1} — {v.hookStyle}
                     </h3>
                     {bestIdx === i && (
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-accent/10 text-accent">
+                      <span className="text-sm px-2.5 py-0.5 rounded-md bg-accent/10 text-accent border border-accent/20">
                         Recommended
                       </span>
                     )}
                   </div>
-                  <span className="text-xs text-muted-foreground">{v.wordCount} words</span>
+                  <span className="text-sm text-muted-foreground">{v.wordCount} words</span>
                 </div>
 
-                <div className="bg-muted/50 rounded-md p-4 mb-4 max-h-52 overflow-y-auto">
-                  <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{v.postText}</p>
+                <div className="bg-secondary/40 rounded-lg p-4 mb-4 max-h-52 overflow-y-auto border border-border/30">
+                  <p className="text-[0.9375rem] text-foreground/85 whitespace-pre-wrap leading-relaxed">{v.postText}</p>
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-5">
                     <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <Heart className="w-4 h-4 text-destructive" />
+                      <Heart className="w-4 h-4 text-rose-500" />
                       {predictions[i]?.reactions} reactions
                     </span>
                     <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -127,13 +113,16 @@ const StepPosts = () => {
                       {predictions[i]?.comments} comments
                     </span>
                   </div>
-                  <Button
-                    onClick={() => handleSelect(i)}
-                    variant={bestIdx === i ? "default" : "outline"}
-                    className={bestIdx === i ? "gradient-primary text-primary-foreground hover:opacity-90" : ""}
+                  <button
+                    onClick={() => { setFinalPost(v.postText); setStep(5); }}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      bestIdx === i
+                        ? "gradient-primary text-white glow-primary hover:opacity-90"
+                        : "border border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5"
+                    }`}
                   >
                     Select This Post
-                  </Button>
+                  </button>
                 </div>
               </div>
             ))}
@@ -141,10 +130,15 @@ const StepPosts = () => {
         </>
       )}
 
-      <Button variant="outline" onClick={() => { setPredictions([]); setStep(3); }} disabled={loadingPreds}>
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Back
-      </Button>
+      <button
+        onClick={() => { setPredictions([]); setStep(3); }}
+        disabled={loadingPreds}
+        className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-base font-medium
+          border border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5
+          transition-all duration-200 disabled:opacity-40"
+      >
+        <ArrowLeft className="w-4 h-4" /> Back
+      </button>
     </div>
   );
 };
