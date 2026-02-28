@@ -14,6 +14,30 @@ pip install -r backend/requirements.txt
 cd frontend && npm install
 ```
 
+### Install Graphviz system binaries
+
+The visual generation feature requires the Graphviz `dot` executable in addition to the Python package.
+
+**Any OS (conda/mamba — recommended):**
+```bash
+conda install -c conda-forge graphviz
+```
+
+If you're not using conda, use your OS package manager:
+
+| OS | Command |
+|----|---------|
+| Amazon Linux 2023 | `sudo dnf install -y graphviz` |
+| macOS | `brew install graphviz` |
+| Windows | `winget install Graphviz.Graphviz` |
+
+> **Windows note:** If `dot` is not found after install, add `C:\Program Files\Graphviz\bin` to your system PATH manually.
+
+Verify the install worked:
+```bash
+dot -V
+```
+
 ### Export secrets
 
 Run these once in your terminal session before starting anything:
@@ -31,12 +55,14 @@ export PYTHONIOENCODING="utf-8"
 Open **two terminals**, run the exports from Setup in each, then:
 
 **Terminal 1 — Backend**
+
 ```bash
 cd backend
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 **Terminal 2 — Frontend**
+
 ```bash
 cd frontend
 npm run dev
@@ -94,11 +120,12 @@ kill -9 $(lsof -ti :8000) $(lsof -ti :8080)
 
 ## 4. Troubleshooting
 
-| Issue | Fix |
-|---|---|
-| `ModuleNotFoundError: No module named 'fastapi'` | Run `pip install -r backend/requirements.txt` |
-| `/api/trends` times out | Normal — takes 20–60s. Wait or check `trend_cache.json` |
-| `UnicodeEncodeError` | Re-run `export PYTHONIOENCODING=utf-8` |
-| CORS error in browser | Check `frontend/.env.local` has `VITE_API_URL=http://localhost:8000` |
-| `/api/visual` returns error | Ollama must be running: `ollama serve` |
-| Models not loaded (503) | Backend still starting — wait a few seconds and retry |
+| Issue                                            | Fix                                                                  |
+| ------------------------------------------------ | -------------------------------------------------------------------- |
+| `ModuleNotFoundError: No module named 'fastapi'` | Run `pip install -r backend/requirements.txt`                        |
+| `/api/trends` times out                          | Normal — takes 20–60s. Wait or check `trend_cache.json`              |
+| `UnicodeEncodeError`                             | Re-run `export PYTHONIOENCODING=utf-8`                               |
+| CORS error in browser                            | Check `frontend/.env.local` has `VITE_API_URL=http://localhost:8000` |
+| `/api/visual` returns error                      | Ollama must be running: `ollama serve`                               |
+| `failed to execute PosixPath('dot')`             | Graphviz binaries not installed — see **Install Graphviz** above     |
+| Models not loaded (503)                          | Backend still starting — wait a few seconds and retry                |

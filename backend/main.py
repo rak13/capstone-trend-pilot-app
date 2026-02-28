@@ -9,7 +9,6 @@ import base64
 import json
 import os
 import re
-import subprocess
 import sys
 import warnings
 from contextlib import asynccontextmanager
@@ -42,11 +41,13 @@ os.chdir(BASE_DIR)
 
 sys.path.insert(0, str(MODULE_DIR))
 sys.path.insert(0, str(BASE_DIR))
+sys.path.insert(0, str(VISUAL_DIR / "service"))
 
 # ── module imports (after load_dotenv + chdir) ─────────────────────────────────
 from trend_identification_v2 import get_trending_topics, select_post_topic  # noqa: E402
 from helpers.feature_engineering import extract_features  # noqa: E402
 from openai import OpenAI  # noqa: E402
+from visual_service import run_llm, generate_graphviz_image, generate_mermaid_image, generate_sd_image  # noqa: E402
 import auth as _auth  # noqa: E402
 
 # ── model globals ──────────────────────────────────────────────────────────────
@@ -398,59 +399,27 @@ def visual(req: VisualRequest):
     Returns a base64-encoded PNG. The generated file is deleted after encoding.
     Requires Ollama (local LLM) and either Graphviz or Stable Diffusion.
     """
-    script      = str(VISUAL_DIR / "service" / "visual_service.py")
-    service_cwd = str(VISUAL_DIR / "service")
-
     try:
-        result = subprocess.run(
-            [sys.executable, script, req.post_text],
-            capture_output=True,
-            text=True,
-            cwd=service_cwd,
-            timeout=120,
-        )
-    except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=504, detail="Visual service timed out after 120s")
+        llm_res = run_llm(req.post_text)
     except Exception as e:
-        logger.exception("Visual service error")
-        raise HTTPException(status_code=500, detail=f"Visual service error: {e}")
+        logger.exception("Visual LLM error")
+        raise HTTPException(status_code=500, detail=f"Visual LLM error: {e}")
 
-    stdout = result.stdout.strip()
-    stderr = result.stderr.strip()
-
-    if not stdout:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Visual service produced no output.\n{stderr}",
-        )
-
-    # Find last JSON line in stdout
-    last_json = next(
-        (line for line in reversed(stdout.splitlines()) if line.strip().startswith("{")),
-        None,
-    )
-    if not last_json:
-        raise HTTPException(
-            status_code=500,
-            detail=f"No JSON in visual service output:\n{stdout}",
-        )
-
+    typ = llm_res.get("type")
     try:
-        data = json.loads(last_json)
-    except json.JSONDecodeError as e:
-        raise HTTPException(status_code=500, detail=f"Could not parse visual service JSON: {e}")
+        if typ == "diagram":
+            image_path = generate_graphviz_image(llm_res.get("diagram_code", ""))
+        elif typ == "image":
+            image_path = generate_sd_image(llm_res.get("prompt", req.post_text))
+        else:
+            return {"image_data": None, "content_type": "image/png", "error": "No visual generated for this content"}
+    except Exception as e:
+        logger.exception("Visual generation error")
+        raise HTTPException(status_code=500, detail=f"Visual generation error: {e}")
 
-    if "error" in data:
-        return {"image_data": None, "content_type": "image/png", "error": data["error"]}
-
-    if data.get("type") == "none":
-        return {"image_data": None, "content_type": "image/png", "error": "No visual generated for this content"}
-
-    image_path = data.get("path", "")
     if not image_path or not os.path.exists(image_path):
         return {"image_data": None, "content_type": "image/png", "error": f"Image file not found: {image_path}"}
 
-    # Read, base64 encode, delete
     try:
         with open(image_path, "rb") as f:
             raw_bytes = f.read()
