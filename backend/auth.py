@@ -53,6 +53,16 @@ def init_db() -> None:
                 created_at  TEXT    DEFAULT (datetime('now'))
             );
         """)
+        # Migrate: add LinkedIn columns if they don't exist yet
+        for col, typedef in [
+            ("linkedin_access_token", "TEXT DEFAULT NULL"),
+            ("linkedin_person_id",    "TEXT DEFAULT NULL"),
+        ]:
+            try:
+                conn.execute(f"ALTER TABLE users ADD COLUMN {col} {typedef}")
+                conn.commit()
+            except Exception:
+                pass  # column already exists
 
 
 # ── Password helpers ─────────────────────────────────────────────────────────
@@ -130,6 +140,26 @@ def save_post(user_id: int, title: str, content: str, reactions: int = 0, commen
         conn.commit()
         row = conn.execute("SELECT * FROM posts WHERE id=?", (cur.lastrowid,)).fetchone()
         return dict(row)
+
+
+def save_linkedin_token(user_id: int, access_token: str, person_id: str) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE users SET linkedin_access_token=?, linkedin_person_id=? WHERE id=?",
+            (access_token, person_id, user_id),
+        )
+        conn.commit()
+
+
+def get_linkedin_token(user_id: int) -> tuple[Optional[str], Optional[str]]:
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT linkedin_access_token, linkedin_person_id FROM users WHERE id=?",
+            (user_id,),
+        ).fetchone()
+        if row:
+            return row[0], row[1]
+        return None, None
 
 
 def get_user_posts(user_id: int) -> list[dict]:

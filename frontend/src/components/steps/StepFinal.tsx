@@ -3,18 +3,22 @@ import { useNavigate } from "react-router-dom";
 import { useWizardStore } from "@/lib/wizard-store";
 import { useAuthStore } from "@/lib/auth-store";
 import { fetchVisual, fetchRefinePost } from "@/lib/api";
-import { savePost } from "@/lib/auth-api";
+import { savePost, publishToLinkedIn } from "@/lib/auth-api";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Check, Copy, Edit2, Loader2, RefreshCw, RotateCw,
-  Sparkles, Undo2, X, BookmarkCheck,
+  Check, Copy, Edit2, Linkedin, Loader2, RefreshCw, RotateCw,
+  Sparkles, Undo2, X, BookmarkCheck, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
+
+const LI_CLIENT_ID   = "86ntx29ps8h86s";
+const LI_REDIRECT    = "http://localhost:8000/oauth/callback";  // backend handles exchange
+const LI_SCOPE       = "openid profile w_member_social";
 
 const StepFinal = () => {
   const navigate = useNavigate();
   const { finalPost, chosenTitle, predictions, reset } = useWizardStore();
-  const { token } = useAuthStore();
+  const { token, linkedinConnected, setLinkedIn } = useAuthStore();
 
   const [editedPost, setEditedPost] = useState(finalPost ?? "");
   const [isEditing, setIsEditing] = useState(false);
@@ -27,6 +31,9 @@ const StepFinal = () => {
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [linkedinPostUrl, setLinkedinPostUrl] = useState<string | null>(null);
+  const popupRef = useRef<Window | null>(null);
 
   const [customPrompt, setCustomPrompt] = useState("");
   const [visualLoading, setVisualLoading] = useState(false);
@@ -94,6 +101,43 @@ const StepFinal = () => {
       setRefineError(err instanceof Error ? err.message : "Refinement failed.");
     } finally { setRefineLoading(false); }
   };
+
+  const handleConnectLinkedIn = () => {
+    if (!token) return;
+    const state = btoa(token).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+    const url = `https://www.linkedin.com/oauth/v2/authorization?response_type=code`
+      + `&client_id=${LI_CLIENT_ID}`
+      + `&redirect_uri=${encodeURIComponent(LI_REDIRECT)}`
+      + `&scope=${encodeURIComponent(LI_SCOPE)}`
+      + `&state=${state}`;
+    popupRef.current = window.open(url, "linkedin_oauth", "width=600,height=700,left=200,top=100");
+  };
+
+  const handlePublishToLinkedIn = async () => {
+    if (!token) return;
+    setPublishing(true);
+    try {
+      const { url } = await publishToLinkedIn(token, editedPost, visualImageData);
+      setLinkedinPostUrl(url);
+      toast.success("Published to LinkedIn!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "LinkedIn publish failed.");
+    } finally { setPublishing(false); }
+  };
+
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type !== "linkedin_auth") return;
+      if (e.data.success) {
+        setLinkedIn(e.data.personId);
+        toast.success("LinkedIn connected! You can now publish.");
+      } else {
+        toast.error(e.data.error ?? "LinkedIn connection failed.");
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [setLinkedIn]);
 
   return (
     <div className="animate-fade-in max-w-2xl mx-auto">
@@ -204,8 +248,45 @@ const StepFinal = () => {
               disabled:opacity-40 disabled:cursor-not-allowed transition-all"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookmarkCheck className="w-4 h-4" />}
-            {saved ? "View My Posts" : saving ? "Saving…" : "Publish & Save"}
+            {saved ? "View My Posts" : saving ? "Saving…" : "Save to History"}
           </button>
+        )}
+
+        {/* LinkedIn publish flow */}
+        {token && !linkedinConnected && (
+          <button
+            onClick={handleConnectLinkedIn}
+            className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
+              border border-[#0A66C2]/60 text-[#0A66C2] hover:bg-[#0A66C2]/10
+              transition-all"
+          >
+            <Linkedin className="w-4 h-4" /> Connect LinkedIn
+          </button>
+        )}
+
+        {token && linkedinConnected && !linkedinPostUrl && (
+          <button
+            onClick={handlePublishToLinkedIn}
+            disabled={publishing}
+            className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
+              bg-[#0A66C2] text-white hover:bg-[#0A66C2]/90
+              disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Linkedin className="w-4 h-4" />}
+            {publishing ? "Publishing…" : "Publish to LinkedIn"}
+          </button>
+        )}
+
+        {linkedinPostUrl && (
+          <a
+            href={linkedinPostUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
+              bg-[#0A66C2] text-white hover:bg-[#0A66C2]/90 transition-all"
+          >
+            <ExternalLink className="w-4 h-4" /> View on LinkedIn
+          </a>
         )}
 
         <button onClick={reset}
