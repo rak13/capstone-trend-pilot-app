@@ -126,8 +126,8 @@ Remove the existing URL Redirect record and replace with:
 
 | Type | Host | Value | TTL |
 |------|------|-------|-----|
-| A Record | @ | 3.25.199.222 | Automatic |
-| A Record | www | 3.25.199.222 | Automatic |
+| A Record | @ | 3.25.193.222 | Automatic |
+| A Record | www | 3.25.193.222 | Automatic |
 
 Wait 5–30 minutes for DNS to propagate. Verify with:
 ```bash
