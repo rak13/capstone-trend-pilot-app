@@ -26,37 +26,37 @@ const Index = () => {
       >
         <div className="container max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center glow-primary">
-              <Rocket className="w-4 h-4 text-white" />
+            <div className="w-11 h-11 rounded-lg gradient-primary flex items-center justify-center glow-primary">
+              <Rocket className="w-6 h-6 text-white" />
             </div>
-            <span className="text-base font-display font-semibold text-foreground tracking-tight">TrendPilot</span>
-            <span className="text-sm text-muted-foreground hidden sm:inline">LinkedIn Post Creator</span>
+            <span className="text-xl font-display font-semibold text-foreground tracking-tight">TrendPilot</span>
+            <span className="text-base text-muted-foreground hidden sm:inline">LinkedIn Post Creator</span>
           </div>
 
           <div className="flex items-center gap-1">
             {user && (
-              <span className="text-sm text-muted-foreground hidden sm:block mr-3">
+              <span className="text-base text-muted-foreground hidden sm:block mr-3">
                 {user.name.split(" ")[0]}
               </span>
             )}
             <button
               onClick={() => navigate("/history")}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-medium
                 text-muted-foreground hover:text-foreground hover:bg-white/5
                 transition-all duration-200"
             >
-              <History className="w-4 h-4" />
+              <History className="w-5 h-5" />
               My Posts
             </button>
             <ThemeToggle />
             <button
               onClick={handleLogout}
               aria-label="Sign out"
-              className="w-9 h-9 rounded-lg flex items-center justify-center
+              className="w-11 h-11 rounded-lg flex items-center justify-center
                 text-muted-foreground hover:text-foreground hover:bg-white/5
                 transition-all duration-200"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-5 h-5" />
             </button>
           </div>
         </div>
