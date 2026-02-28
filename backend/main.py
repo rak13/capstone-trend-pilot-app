@@ -562,7 +562,7 @@ def linkedin_oauth_callback(code: str = "", state: str = "", error: str = ""):
 
     # Decode state → app JWT → user_id
     try:
-        padding = 4 - len(state) % 4
+        padding = (4 - len(state) % 4) % 4
         jwt_token = base64.urlsafe_b64decode(state + "=" * padding).decode()
         user_id = _auth.decode_token(jwt_token)
         if not user_id:
@@ -605,6 +605,13 @@ def linkedin_oauth_callback(code: str = "", state: str = "", error: str = ""):
 
     _auth.save_linkedin_token(user_id, li_access_token, person_id)
     return RedirectResponse(f"{frontend_cb}?success=true&person_id={person_id}")
+
+
+@app.get("/api/linkedin/status", tags=["linkedin"])
+def linkedin_status(current_user: dict = Depends(_current_user)):
+    """Returns whether the current user has a LinkedIn account connected."""
+    li_token, person_id = _auth.get_linkedin_token(current_user["id"])
+    return {"connected": bool(li_token and person_id), "person_id": person_id or ""}
 
 
 @app.post("/api/linkedin/post", tags=["linkedin"])

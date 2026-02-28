@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useWizardStore } from "@/lib/wizard-store";
 import { useAuthStore } from "@/lib/auth-store";
 import { fetchVisual, fetchRefinePost } from "@/lib/api";
-import { savePost, publishToLinkedIn } from "@/lib/auth-api";
+import { savePost, publishToLinkedIn, checkLinkedInStatus } from "@/lib/auth-api";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Check, Copy, Edit2, Linkedin, Loader2, RefreshCw, RotateCw,
@@ -18,7 +18,7 @@ const LI_SCOPE       = "openid profile w_member_social";
 const StepFinal = () => {
   const navigate = useNavigate();
   const { finalPost, chosenTitle, predictions, reset } = useWizardStore();
-  const { token, linkedinConnected, setLinkedIn } = useAuthStore();
+  const { token, linkedinConnected, setLinkedIn, clearLinkedIn } = useAuthStore();
 
   const [editedPost, setEditedPost] = useState(finalPost ?? "");
   const [isEditing, setIsEditing] = useState(false);
@@ -121,10 +121,28 @@ const StepFinal = () => {
       setLinkedinPostUrl(url);
       toast.success("Published to LinkedIn!");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "LinkedIn publish failed.");
+      const msg = err instanceof Error ? err.message : "LinkedIn publish failed.";
+      if (msg.includes("not connected")) {
+        clearLinkedIn();
+        toast.error("LinkedIn session expired. Please reconnect.");
+      } else {
+        toast.error(msg);
+      }
     } finally { setPublishing(false); }
   };
 
+  // Sync LinkedIn connection status from backend on mount (avoids stale localStorage state)
+  useEffect(() => {
+    if (!token) return;
+    checkLinkedInStatus(token)
+      .then(({ connected, person_id }) => {
+        if (connected) setLinkedIn(person_id);
+        else clearLinkedIn();
+      })
+      .catch(() => { /* ignore — backend may be unreachable */ });
+  }, [token, setLinkedIn, clearLinkedIn]);
+
+  // Listen for OAuth popup result
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       if (e.data?.type !== "linkedin_auth") return;

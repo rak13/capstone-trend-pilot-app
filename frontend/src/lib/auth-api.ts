@@ -91,6 +91,15 @@ export async function exchangeLinkedInCode(
   });
 }
 
+export async function checkLinkedInStatus(
+  token: string,
+): Promise<{ connected: boolean; person_id: string }> {
+  return authFetch("/api/linkedin/status", {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export async function publishToLinkedIn(
   token: string,
   text: string,
