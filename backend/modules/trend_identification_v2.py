@@ -193,10 +193,11 @@ Instructions:
 4. Each title MUST name the specific thing people are searching for (a tool, comparison, launch, integration, controversy) — not a generic angle.
 5. The post should feel like the author is reacting to something happening NOW, not writing a textbook intro.
 
-BAD examples (too generic, or fabricated versions — avoid these):
+BAD examples (too generic, outdated or fabricated versions — avoid these):
 - "Unlocking New Potentials: How AWS Transforms Cloud Architecture"
 - "Why Kubernetes is the Future of DevOps"
 - "OpenShift 4.12: What Its New GitOps Features Mean..." (version not from search data = hallucinated)
+- "What is happening in AWS in 2023"
 
 GOOD examples (specific, timely, grounded in a real search signal):
 - "AWS just launched S3 Express One Zone — here's why it changes the game for latency-sensitive apps"

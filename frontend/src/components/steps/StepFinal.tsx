@@ -1,13 +1,18 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useWizardStore } from "@/lib/wizard-store";
+import { useAuthStore } from "@/lib/auth-store";
 import { fetchVisual, fetchRefinePost } from "@/lib/api";
+import { savePost } from "@/lib/auth-api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, Copy, Edit2, Loader2, RefreshCw, RotateCw, Rocket, Sparkles, Undo2, X } from "lucide-react";
+import { Check, Copy, Edit2, Loader2, RefreshCw, RotateCw, Rocket, Sparkles, Undo2, X, BookmarkCheck } from "lucide-react";
 import { toast } from "sonner";
 
 const StepFinal = () => {
-  const { finalPost, chosenTitle, reset } = useWizardStore();
+  const navigate = useNavigate();
+  const { finalPost, chosenTitle, predictions, reset } = useWizardStore();
+  const { token } = useAuthStore();
 
   // ── Post editing ────────────────────────────────────────────────────────────
   const [editedPost, setEditedPost] = useState(finalPost ?? "");
@@ -19,6 +24,8 @@ const StepFinal = () => {
   const [refineError, setRefineError] = useState<string | null>(null);
 
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   // ── Visual generation ───────────────────────────────────────────────────────
   const [customPrompt, setCustomPrompt] = useState("");
@@ -92,6 +99,27 @@ const StepFinal = () => {
     setDraftText(finalPost ?? "");
     setIsEditing(false);
     toast.success("Post reset to original.");
+  };
+
+  const handleSavePost = async () => {
+    if (!token) return;
+    setSaving(true);
+    try {
+      const latestPrediction = predictions[predictions.length - 1];
+      await savePost(
+        token,
+        chosenTitle ?? "",
+        editedPost,
+        latestPrediction?.reactions ?? 0,
+        latestPrediction?.comments ?? 0,
+      );
+      setSaved(true);
+      toast.success("Post saved to My Posts!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save post.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleRefine = async () => {
@@ -202,7 +230,7 @@ const StepFinal = () => {
         )}
       </div>
 
-      {/* ── Copy / Start Over ────────────────────────────────────────────────── */}
+      {/* ── Copy / Save / Start Over ──────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
         <Button
           onClick={handleCopy}
@@ -212,6 +240,21 @@ const StepFinal = () => {
           {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
           {copied ? "Copied!" : "Copy to Clipboard"}
         </Button>
+        {token && (
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={saved ? () => navigate("/history") : handleSavePost}
+            disabled={saving}
+          >
+            {saving ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <BookmarkCheck className="w-4 h-4 mr-2" />
+            )}
+            {saved ? "View My Posts" : saving ? "Saving…" : "Publish & Save"}
+          </Button>
+        )}
         <Button variant="outline" size="lg" onClick={reset}>
           <RotateCw className="w-4 h-4 mr-2" />
           Start Over

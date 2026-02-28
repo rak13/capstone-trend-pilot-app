@@ -22,8 +22,9 @@ import joblib
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,7 @@ sys.path.insert(0, str(BASE_DIR))
 from trend_identification_v2 import get_trending_topics, select_post_topic  # noqa: E402
 from helpers.feature_engineering import extract_features  # noqa: E402
 from openai import OpenAI  # noqa: E402
+import auth as _auth  # noqa: E402
 
 # ── model globals ──────────────────────────────────────────────────────────────
 mdl_r = mdl_c = feat_r = feat_c = loo_r = loo_c = None
@@ -54,6 +56,7 @@ mdl_r = mdl_c = feat_r = feat_c = loo_r = loo_c = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global mdl_r, mdl_c, feat_r, feat_c, loo_r, loo_c
+    _auth.init_db()  # bootstrap SQLite tables
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         mdl_r = joblib.load(ENGMT_DIR / "hgbr_reactions.pkl")
@@ -124,6 +127,33 @@ class VisualRequest(BaseModel):
 class RefinePostRequest(BaseModel):
     post_text: str
     instruction: str
+
+
+# ── Auth schemas ───────────────────────────────────────────────────────────────
+
+class RegisterRequest(BaseModel):
+    email: str
+    name: str
+    password: str
+    interests: str = ""
+    followers: int = 1000
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class UpdateProfileRequest(BaseModel):
+    interests: str
+    followers: int
+
+
+class SavePostRequest(BaseModel):
+    title: str = ""
+    content: str
+    reactions: int = 0
+    comments: int = 0
 
 
 # ── inline helpers (copied/adapted from app.py) ────────────────────────────────
@@ -435,3 +465,90 @@ def visual(req: VisualRequest):
             pass  # best-effort cleanup
 
     return {"image_data": encoded, "content_type": "image/png", "error": None}
+
+
+# ── Auth helpers ────────────────────────────────────────────────────────────────
+
+_bearer = HTTPBearer(auto_error=False)
+
+
+def _current_user(creds: Optional[HTTPAuthorizationCredentials] = Depends(_bearer)) -> dict:
+    if not creds:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    user_id = _auth.decode_token(creds.credentials)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    user = _auth.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+
+def _safe_user(u: dict) -> dict:
+    """Strip password hash before returning to client."""
+    return {k: v for k, v in u.items() if k != "password_hash"}
+
+
+# ── Auth routes ─────────────────────────────────────────────────────────────────
+
+@app.post("/api/auth/register", tags=["auth"])
+def register(req: RegisterRequest):
+    """Register a new user. Returns JWT token."""
+    if not req.email or not req.name or not req.password:
+        raise HTTPException(status_code=400, detail="Email, name, and password are required.")
+    try:
+        user = _auth.create_user(
+            email=req.email,
+            name=req.name,
+            password=req.password,
+            interests=req.interests,
+            followers=req.followers,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    token = _auth.create_access_token(user["id"])
+    return {"token": token, "user": _safe_user(user)}
+
+
+@app.post("/api/auth/login", tags=["auth"])
+def login(req: LoginRequest):
+    """Login with email + password. Returns JWT token."""
+    user = _auth.get_user_by_email(req.email)
+    if not user or not _auth.verify_password(req.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+    token = _auth.create_access_token(user["id"])
+    return {"token": token, "user": _safe_user(user)}
+
+
+@app.get("/api/auth/me", tags=["auth"])
+def me(current_user: dict = Depends(_current_user)):
+    """Return the currently authenticated user's profile."""
+    return _safe_user(current_user)
+
+
+@app.put("/api/auth/profile", tags=["auth"])
+def update_profile(req: UpdateProfileRequest, current_user: dict = Depends(_current_user)):
+    """Update interests and followers for the authenticated user."""
+    updated = _auth.update_user_profile(current_user["id"], req.interests, req.followers)
+    return _safe_user(updated)
+
+
+# ── Post history routes ─────────────────────────────────────────────────────────
+
+@app.post("/api/posts", tags=["posts"])
+def create_post(req: SavePostRequest, current_user: dict = Depends(_current_user)):
+    """Save a completed post to the authenticated user's history."""
+    post = _auth.save_post(
+        user_id=current_user["id"],
+        title=req.title,
+        content=req.content,
+        reactions=req.reactions,
+        comments=req.comments,
+    )
+    return post
+
+
+@app.get("/api/posts", tags=["posts"])
+def list_posts(current_user: dict = Depends(_current_user)):
+    """Return all posts created by the authenticated user, newest first."""
+    return _auth.get_user_posts(current_user["id"])

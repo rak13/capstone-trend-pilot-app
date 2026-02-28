@@ -1,0 +1,49 @@
+INFO:     Will watch for changes in these directories: ['/Users/BirajMishra/work/playground/ms/capstone/capstone-trend-pilot-app/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [79103] using StatReload
+/Users/BirajMishra/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+INFO:     Started server process [79105]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+(trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "/Users/BirajMishra/Library/Python/3.9/lib/python/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+AttributeError: module 'bcrypt' has no attribute '__about__'
+INFO:     127.0.0.1:57539 - "POST /api/auth/register HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57568 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:57685 - "POST /api/auth/register HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57693 - "PUT /api/auth/profile HTTP/1.1" 200 OK
+/Users/BirajMishra/Library/Python/3.9/lib/python/site-packages/pytrends/request.py:260: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  df = df.fillna(False)
+/Users/BirajMishra/Library/Python/3.9/lib/python/site-packages/pytrends/request.py:260: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  df = df.fillna(False)
+/Users/BirajMishra/Library/Python/3.9/lib/python/site-packages/pytrends/request.py:260: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  df = df.fillna(False)
+INFO:     127.0.0.1:57694 - "POST /api/trends HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57715 - "POST /api/post-titles HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57731 - "POST /api/post-variants HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57742 - "POST /api/predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57745 - "POST /api/predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57744 - "POST /api/predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57749 - "POST /api/visual HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57756 - "POST /api/posts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57759 - "GET /api/posts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57768 - "GET /api/posts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57763 - "POST /api/visual HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57784 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57788 - "GET /api/posts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57806 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57816 - "PUT /api/auth/profile HTTP/1.1" 200 OK
+/Users/BirajMishra/Library/Python/3.9/lib/python/site-packages/pytrends/request.py:260: FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated and will change in a future version. Call result.infer_objects(copy=False) instead. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  df = df.fillna(False)
+INFO:     127.0.0.1:57817 - "POST /api/trends HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57833 - "POST /api/post-titles HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57839 - "POST /api/post-variants HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57849 - "POST /api/predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57847 - "POST /api/predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57850 - "POST /api/predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57860 - "POST /api/visual HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57869 - "POST /api/posts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57872 - "GET /api/posts HTTP/1.1" 200 OK
