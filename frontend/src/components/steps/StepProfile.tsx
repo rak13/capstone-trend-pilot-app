@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useWizardStore } from "@/lib/wizard-store";
+import { useAuthStore } from "@/lib/auth-store";
 import { fetchTrendingTopics } from "@/lib/api";
+import { updateProfile } from "@/lib/auth-api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -8,8 +10,14 @@ import { ArrowRight, User, Users } from "lucide-react";
 
 const StepProfile = () => {
   const { profileText, followers, setProfileText, setFollowers, setTrendingTopics, setStep, setIsLoading } = useWizardStore();
-  const [bio, setBio] = useState(profileText);
-  const [followerCount, setFollowerCount] = useState(followers.toString());
+  const { token, user, updateUser } = useAuthStore();
+
+  // Pre-fill from user profile if wizard state is empty
+  const defaultBio = profileText || user?.interests || "";
+  const defaultFollowers = profileText ? followers : (user?.followers ?? 1000);
+
+  const [bio, setBio] = useState(defaultBio);
+  const [followerCount, setFollowerCount] = useState(defaultFollowers.toString());
   const [error, setError] = useState("");
 
   const handleAnalyze = async () => {
@@ -22,6 +30,13 @@ const StepProfile = () => {
     const followersNum = parseInt(followerCount) || 1000;
     setProfileText(bio.trim());
     setFollowers(followersNum);
+
+    // Persist updated interests + followers back to user profile
+    if (token) {
+      updateProfile(token, bio.trim(), followersNum)
+        .then(updateUser)
+        .catch(() => {/* non-blocking */});
+    }
 
     try {
       const topics = await fetchTrendingTopics(bio.trim(), followersNum);
@@ -53,6 +68,9 @@ const StepProfile = () => {
             placeholder="What topics are you passionate about, and what would you like to post about today?… e.g. 'Interested in AI ethics and productivity. Thinking about writing on how AI tools are changing the way teams work.'"
             className="min-h-[180px] resize-none bg-card border-border focus:ring-primary"
           />
+          {user?.interests && !profileText && (
+            <p className="text-xs text-muted-foreground mt-1">Pre-filled from your profile — feel free to update.</p>
+          )}
         </div>
 
         <div>
