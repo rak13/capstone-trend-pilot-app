@@ -1,4 +1,4 @@
-import { Check, Rocket } from "lucide-react";
+import { Check } from "lucide-react";
 
 const STEPS = ["About You", "Topics", "Post Title", "Posts", "Done"];
 
@@ -8,8 +8,8 @@ interface ProgressStepperProps {
 
 const ProgressStepper = ({ currentStep }: ProgressStepperProps) => {
   return (
-    <div className="w-full mb-8">
-      <div className="flex items-center justify-between max-w-2xl mx-auto">
+    <div className="w-full mb-12">
+      <div className="flex items-center justify-between max-w-lg mx-auto">
         {STEPS.map((label, i) => {
           const stepNum = i + 1;
           const isCompleted = stepNum < currentStep;
@@ -17,29 +17,31 @@ const ProgressStepper = ({ currentStep }: ProgressStepperProps) => {
 
           return (
             <div key={label} className="flex items-center">
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center gap-2.5">
                 <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300
-                    ${isCompleted ? "gradient-primary text-primary-foreground" : ""}
-                    ${isCurrent ? "bg-primary text-primary-foreground ring-4 ring-primary/20" : ""}
-                    ${!isCompleted && !isCurrent ? "bg-secondary text-muted-foreground" : ""}
-                  `}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold
+                    border transition-all duration-300
+                    ${isCompleted
+                      ? "gradient-primary text-white border-transparent glow-primary"
+                      : isCurrent
+                      ? "border-primary/60 text-primary bg-primary/10"
+                      : "border-border/50 text-muted-foreground bg-secondary/40"
+                    }`}
                 >
-                  {isCompleted ? <Check className="w-4 h-4" /> : stepNum}
+                  {isCompleted ? <Check className="w-3.5 h-3.5" /> : stepNum}
                 </div>
                 <span
-                  className={`mt-2 text-xs font-medium hidden sm:block
-                    ${isCurrent ? "text-primary" : isCompleted ? "text-foreground" : "text-muted-foreground"}
-                  `}
+                  className={`text-sm font-medium hidden sm:block transition-colors whitespace-nowrap
+                    ${isCurrent ? "text-foreground" : isCompleted ? "text-muted-foreground" : "text-muted-foreground/45"}`}
                 >
                   {label}
                 </span>
               </div>
+
               {i < STEPS.length - 1 && (
                 <div
-                  className={`w-8 sm:w-16 lg:w-24 h-0.5 mx-1 sm:mx-2 transition-colors duration-300
-                    ${stepNum < currentStep ? "bg-primary" : "bg-border"}
-                  `}
+                  className={`w-6 sm:w-10 lg:w-16 h-px mx-2 sm:mx-3 transition-colors duration-500
+                    ${stepNum < currentStep ? "bg-primary/50" : "bg-border/40"}`}
                 />
               )}
             </div>

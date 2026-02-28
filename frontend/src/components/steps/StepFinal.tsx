@@ -4,9 +4,11 @@ import { useWizardStore } from "@/lib/wizard-store";
 import { useAuthStore } from "@/lib/auth-store";
 import { fetchVisual, fetchRefinePost } from "@/lib/api";
 import { savePost } from "@/lib/auth-api";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, Copy, Edit2, Loader2, RefreshCw, RotateCw, Rocket, Sparkles, Undo2, X, BookmarkCheck } from "lucide-react";
+import {
+  Check, Copy, Edit2, Loader2, RefreshCw, RotateCw,
+  Sparkles, Undo2, X, BookmarkCheck,
+} from "lucide-react";
 import { toast } from "sonner";
 
 const StepFinal = () => {
@@ -14,7 +16,6 @@ const StepFinal = () => {
   const { finalPost, chosenTitle, predictions, reset } = useWizardStore();
   const { token } = useAuthStore();
 
-  // ── Post editing ────────────────────────────────────────────────────────────
   const [editedPost, setEditedPost] = useState(finalPost ?? "");
   const [isEditing, setIsEditing] = useState(false);
   const [draftText, setDraftText] = useState(finalPost ?? "");
@@ -27,99 +28,56 @@ const StepFinal = () => {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // ── Visual generation ───────────────────────────────────────────────────────
   const [customPrompt, setCustomPrompt] = useState("");
   const [visualLoading, setVisualLoading] = useState(false);
   const [visualImageData, setVisualImageData] = useState<string | null>(null);
   const [visualContentType, setVisualContentType] = useState("image/png");
   const [visualError, setVisualError] = useState<string | null>(null);
-
   const abortRef = useRef<{ cancelled: boolean }>({ cancelled: false });
 
   const generateVisual = (prompt?: string, postOverride?: string) => {
     const postToUse = postOverride ?? editedPost ?? finalPost;
     if (!postToUse) return;
-
     abortRef.current.cancelled = true;
-    const token = { cancelled: false };
-    abortRef.current = token;
-
+    const tok = { cancelled: false };
+    abortRef.current = tok;
     setVisualLoading(true);
     setVisualError(null);
     setVisualImageData(null);
-
     fetchVisual(postToUse, prompt || undefined)
-      .then((result) => {
-        if (token.cancelled) return;
-        if (result.error) {
-          setVisualError(result.error);
-        } else if (result.image_data) {
-          setVisualImageData(result.image_data);
-          setVisualContentType(result.content_type || "image/png");
-        } else {
-          setVisualError("No image was generated.");
-        }
+      .then((r) => {
+        if (tok.cancelled) return;
+        if (r.error) setVisualError(r.error);
+        else if (r.image_data) { setVisualImageData(r.image_data); setVisualContentType(r.content_type || "image/png"); }
+        else setVisualError("No image was generated.");
       })
-      .catch((err) => {
-        if (token.cancelled) return;
-        setVisualError(err instanceof Error ? err.message : "Visual generation failed.");
-      })
-      .finally(() => {
-        if (!token.cancelled) setVisualLoading(false);
-      });
+      .catch((e) => { if (!tok.cancelled) setVisualError(e instanceof Error ? e.message : "Visual generation failed."); })
+      .finally(() => { if (!tok.cancelled) setVisualLoading(false); });
   };
 
-  // Auto-generate on mount
   useEffect(() => {
     generateVisual();
     return () => { abortRef.current.cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
-
   const handleCopy = async () => {
     await navigator.clipboard.writeText(editedPost);
     setCopied(true);
-    toast.success("Post copied to clipboard!");
+    toast.success("Copied to clipboard!");
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleEditSave = () => {
-    setEditedPost(draftText);
-    setIsEditing(false);
-  };
-
-  const handleEditCancel = () => {
-    setDraftText(editedPost);
-    setIsEditing(false);
-  };
-
-  const handleReset = () => {
-    setEditedPost(finalPost ?? "");
-    setDraftText(finalPost ?? "");
-    setIsEditing(false);
-    toast.success("Post reset to original.");
   };
 
   const handleSavePost = async () => {
     if (!token) return;
     setSaving(true);
     try {
-      const latestPrediction = predictions[predictions.length - 1];
-      await savePost(
-        token,
-        chosenTitle ?? "",
-        editedPost,
-        latestPrediction?.reactions ?? 0,
-        latestPrediction?.comments ?? 0,
-      );
+      const latest = predictions[predictions.length - 1];
+      await savePost(token, chosenTitle ?? "", editedPost, latest?.reactions ?? 0, latest?.comments ?? 0);
       setSaved(true);
       toast.success("Post saved to My Posts!");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save post.");
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   const handleRefine = async () => {
@@ -134,181 +92,176 @@ const StepFinal = () => {
       toast.success("Post updated!");
     } catch (err) {
       setRefineError(err instanceof Error ? err.message : "Refinement failed.");
-    } finally {
-      setRefineLoading(false);
-    }
-  };
-
-  const handleVisualRegenerate = () => {
-    generateVisual(customPrompt.trim() || undefined);
+    } finally { setRefineLoading(false); }
   };
 
   return (
-    <div className="animate-fade-in max-w-3xl mx-auto">
-      <div className="text-center mb-8">
-        <div className="w-16 h-16 rounded-full gradient-accent flex items-center justify-center mx-auto mb-4">
-          <Rocket className="w-8 h-8 text-accent-foreground" />
+    <div className="animate-fade-in max-w-2xl mx-auto">
+      <div className="text-center mb-10">
+        <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-5 glow-primary">
+          <Check className="w-7 h-7 text-white" />
         </div>
-        <h2 className="text-2xl font-display font-bold text-foreground mb-2">Your Post is Ready!</h2>
-        <p className="text-muted-foreground">Copy it and paste it directly into LinkedIn.</p>
+        <h2 className="text-3xl font-display font-semibold text-foreground mb-2 tracking-tight">Your post is ready</h2>
+        <p className="text-base text-muted-foreground">Copy it and paste directly into LinkedIn.</p>
       </div>
 
-      {/* ── Post card ────────────────────────────────────────────────────────── */}
-      <div className="bg-card border-2 border-border rounded-lg p-6 mb-3">
-        <p className="font-display font-semibold text-foreground mb-4">{chosenTitle}</p>
-
+      {/* Post card */}
+      <div className="bg-card border border-border/60 rounded-xl p-6 mb-4">
+        {chosenTitle && (
+          <p className="text-base font-display font-semibold text-foreground mb-4 pb-4 border-b border-border/40">
+            {chosenTitle}
+          </p>
+        )}
         {isEditing ? (
           <Textarea
             value={draftText}
             onChange={(e) => setDraftText(e.target.value)}
-            className="min-h-[220px] resize-none bg-background border-border focus:ring-primary text-foreground leading-relaxed"
+            className="min-h-[220px] resize-none bg-secondary/40 border-border/60 focus-visible:ring-primary/40
+              text-foreground leading-relaxed text-[0.9375rem]"
             autoFocus
           />
         ) : (
-          <div className="bg-muted/50 rounded-md p-5">
-            <p className="text-foreground whitespace-pre-wrap leading-relaxed">{editedPost}</p>
+          <div className="bg-secondary/30 rounded-lg p-5">
+            <p className="text-[0.9375rem] text-foreground whitespace-pre-wrap leading-relaxed">{editedPost}</p>
           </div>
         )}
       </div>
 
-      {/* ── Edit toolbar ─────────────────────────────────────────────────────── */}
+      {/* Edit toolbar */}
       <div className="flex flex-wrap gap-2 mb-6">
         {isEditing ? (
           <>
-            <Button size="sm" onClick={handleEditSave} className="gradient-primary text-primary-foreground hover:opacity-90">
+            <ToolBtn onClick={() => { setEditedPost(draftText); setIsEditing(false); }} primary>
               <Check className="w-3.5 h-3.5 mr-1.5" /> Save
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleEditCancel}>
+            </ToolBtn>
+            <ToolBtn onClick={() => { setDraftText(editedPost); setIsEditing(false); }}>
               <X className="w-3.5 h-3.5 mr-1.5" /> Cancel
-            </Button>
+            </ToolBtn>
           </>
         ) : (
           <>
-            <Button size="sm" variant="outline" onClick={() => { setDraftText(editedPost); setIsEditing(true); }}>
+            <ToolBtn onClick={() => { setDraftText(editedPost); setIsEditing(true); }}>
               <Edit2 className="w-3.5 h-3.5 mr-1.5" /> Edit
-            </Button>
+            </ToolBtn>
             {editedPost !== finalPost && (
-              <Button size="sm" variant="outline" onClick={handleReset}>
-                <Undo2 className="w-3.5 h-3.5 mr-1.5" /> Reset to original
-              </Button>
+              <ToolBtn onClick={() => { setEditedPost(finalPost ?? ""); setDraftText(finalPost ?? ""); }}>
+                <Undo2 className="w-3.5 h-3.5 mr-1.5" /> Reset
+              </ToolBtn>
             )}
           </>
         )}
       </div>
 
-      {/* ── AI Refine ────────────────────────────────────────────────────────── */}
-      <div className="bg-muted/30 border border-border rounded-lg p-4 mb-6">
-        <div className="flex items-center gap-2 mb-2">
+      {/* AI Refine */}
+      <div className="bg-secondary/25 border border-border/40 rounded-xl p-5 mb-6">
+        <div className="flex items-center gap-2 mb-1.5">
           <Sparkles className="w-4 h-4 text-primary" />
-          <p className="text-sm font-medium text-foreground">Refine with AI</p>
+          <p className="text-sm font-semibold text-foreground">Refine with AI</p>
         </div>
-        <p className="text-xs text-muted-foreground mb-3">
-          Give an instruction and the AI will update the post while keeping your voice and style.
-        </p>
-        <div className="flex gap-2">
+        <p className="text-sm text-muted-foreground mb-4">Give an instruction and the AI will revise while keeping your voice.</p>
+        <div className="flex gap-2.5">
           <input
             type="text"
             value={refineInstruction}
             onChange={(e) => setRefineInstruction(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !refineLoading && handleRefine()}
-            placeholder='e.g. "Make it more concise" or "Add a stronger hook"'
-            className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder='"Make it more concise" or "Add a stronger hook"'
+            className="flex-1 rounded-lg border border-border/60 bg-card px-4 py-2.5 text-sm
+              text-foreground placeholder:text-muted-foreground/45
+              focus:outline-none focus:ring-2 focus:ring-primary/40"
             disabled={refineLoading}
           />
-          <Button
+          <button
             onClick={handleRefine}
             disabled={refineLoading || !refineInstruction.trim()}
-            variant="outline"
-            size="default"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium
+              border border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5
+              disabled:opacity-40 disabled:cursor-not-allowed transition-all"
           >
             {refineLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            <span className="ml-2">{refineLoading ? "Refining…" : "Apply"}</span>
-          </Button>
+            {refineLoading ? "Refining…" : "Apply"}
+          </button>
         </div>
-        {refineError && (
-          <p className="text-destructive text-xs mt-2">{refineError}</p>
-        )}
+        {refineError && <p className="text-sm text-destructive mt-2">{refineError}</p>}
       </div>
 
-      {/* ── Copy / Save / Start Over ──────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
-        <Button
-          onClick={handleCopy}
-          size="lg"
-          className="gradient-primary text-primary-foreground hover:opacity-90 transition-opacity"
+      {/* Action buttons */}
+      <div className="flex flex-wrap gap-3 justify-center mb-10">
+        <button onClick={handleCopy}
+          className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium text-white
+            gradient-primary glow-primary hover:opacity-90 transition-all"
         >
-          {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
           {copied ? "Copied!" : "Copy to Clipboard"}
-        </Button>
+        </button>
+
         {token && (
-          <Button
-            variant="outline"
-            size="lg"
+          <button
             onClick={saved ? () => navigate("/history") : handleSavePost}
             disabled={saving}
+            className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
+              border border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5
+              disabled:opacity-40 disabled:cursor-not-allowed transition-all"
           >
-            {saving ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <BookmarkCheck className="w-4 h-4 mr-2" />
-            )}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookmarkCheck className="w-4 h-4" />}
             {saved ? "View My Posts" : saving ? "Saving…" : "Publish & Save"}
-          </Button>
+          </button>
         )}
-        <Button variant="outline" size="lg" onClick={reset}>
-          <RotateCw className="w-4 h-4 mr-2" />
-          Start Over
-        </Button>
+
+        <button onClick={reset}
+          className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
+            border border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5
+            transition-all"
+        >
+          <RotateCw className="w-4 h-4" /> Start Over
+        </button>
       </div>
 
-      {/* ── Visual generation ────────────────────────────────────────────────── */}
-      <div className="border-t border-border pt-6">
-        <h3 className="text-lg font-display font-semibold text-foreground mb-1 text-center">Visual</h3>
-        <p className="text-sm text-muted-foreground text-center mb-4">
+      {/* Visual */}
+      <div className="border-t border-border/40 pt-8">
+        <h3 className="text-lg font-display font-semibold text-foreground mb-1.5 text-center">Visual</h3>
+        <p className="text-sm text-muted-foreground text-center mb-5">
           Generated from your post content. Override below to guide the image.
         </p>
 
-        <div className="flex gap-2 mb-4">
+        <div className="flex gap-2.5 mb-5">
           <input
             type="text"
             value={customPrompt}
             onChange={(e) => setCustomPrompt(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !visualLoading && handleVisualRegenerate()}
+            onKeyDown={(e) => e.key === "Enter" && !visualLoading && generateVisual(customPrompt || undefined)}
             placeholder="Custom image prompt (optional)"
-            className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="flex-1 rounded-lg border border-border/60 bg-card px-4 py-2.5 text-sm
+              text-foreground placeholder:text-muted-foreground/45
+              focus:outline-none focus:ring-2 focus:ring-primary/40"
             disabled={visualLoading}
           />
-          <Button
-            onClick={handleVisualRegenerate}
+          <button
+            onClick={() => generateVisual(customPrompt || undefined)}
             disabled={visualLoading}
-            variant="outline"
-            size="default"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium
+              border border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5
+              disabled:opacity-40 transition-all"
           >
-            {visualLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <RefreshCw className="w-4 h-4" />
-            )}
-            <span className="ml-2">{visualLoading ? "Generating…" : "Regenerate"}</span>
-          </Button>
+            {visualLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            {visualLoading ? "Generating…" : "Regenerate"}
+          </button>
         </div>
 
-        {visualError && (
-          <p className="text-destructive text-sm text-center font-medium mb-3">{visualError}</p>
-        )}
+        {visualError && <p className="text-sm text-destructive text-center mb-4">{visualError}</p>}
 
         {visualLoading && !visualImageData && (
-          <div className="flex items-center justify-center gap-2 text-muted-foreground py-10">
+          <div className="flex items-center justify-center gap-2.5 text-muted-foreground py-12">
             <Loader2 className="w-5 h-5 animate-spin" />
             <span className="text-sm">Generating visual…</span>
           </div>
         )}
 
         {visualImageData && (
-          <div className="rounded-lg overflow-hidden border border-border">
+          <div className="rounded-xl overflow-hidden border border-border/50">
             <img
               src={`data:${visualContentType};base64,${visualImageData}`}
-              alt="Generated visual for LinkedIn post"
+              alt="Generated visual"
               className="w-full object-contain max-h-[480px]"
             />
           </div>
@@ -317,5 +270,21 @@ const StepFinal = () => {
     </div>
   );
 };
+
+function ToolBtn({ onClick, primary, children }: {
+  onClick: () => void; primary?: boolean; children: React.ReactNode;
+}) {
+  return (
+    <button onClick={onClick}
+      className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+        primary
+          ? "gradient-primary text-white glow-primary hover:opacity-90"
+          : "border border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
 
 export default StepFinal;

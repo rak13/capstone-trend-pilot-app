@@ -7,61 +7,70 @@ import StepTopics from "@/components/steps/StepTopics";
 import StepPostTitle from "@/components/steps/StepPostTitle";
 import StepPosts from "@/components/steps/StepPosts";
 import StepFinal from "@/components/steps/StepFinal";
+import ThemeToggle from "@/components/ThemeToggle";
 import { Rocket, History, LogOut } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const { step, isLoading } = useWizardStore();
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
+  const handleLogout = () => { logout(); navigate("/login"); };
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+      <header
+        className="border-b border-border/50 sticky top-0 z-50"
+        style={{ background: "rgba(27,27,27,0.85)", backdropFilter: "blur(16px)" }}
+      >
+        <div className="container max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center">
-              <Rocket className="w-5 h-5 text-primary-foreground" />
+            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center glow-primary">
+              <Rocket className="w-4 h-4 text-white" />
             </div>
-            <div>
-              <h1 className="text-lg font-display font-bold text-foreground leading-tight">TrendPilot</h1>
-              <p className="text-xs text-muted-foreground">LinkedIn Post Creator</p>
-            </div>
+            <span className="text-base font-display font-semibold text-foreground tracking-tight">TrendPilot</span>
+            <span className="text-sm text-muted-foreground hidden sm:inline">LinkedIn Post Creator</span>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-1">
             {user && (
-              <span className="text-sm text-muted-foreground hidden sm:block mr-2">
-                Hi, {user.name.split(" ")[0]}
+              <span className="text-sm text-muted-foreground hidden sm:block mr-3">
+                {user.name.split(" ")[0]}
               </span>
             )}
-            <Button variant="outline" size="sm" onClick={() => navigate("/history")}>
-              <History className="w-4 h-4 mr-1" />
+            <button
+              onClick={() => navigate("/history")}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+                text-muted-foreground hover:text-foreground hover:bg-white/5
+                transition-all duration-200"
+            >
+              <History className="w-4 h-4" />
               My Posts
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground">
+            </button>
+            <ThemeToggle />
+            <button
+              onClick={handleLogout}
+              aria-label="Sign out"
+              className="w-9 h-9 rounded-lg flex items-center justify-center
+                text-muted-foreground hover:text-foreground hover:bg-white/5
+                transition-all duration-200"
+            >
               <LogOut className="w-4 h-4" />
-              <span className="sr-only">Sign out</span>
-            </Button>
+            </button>
           </div>
         </div>
       </header>
 
       {/* Main */}
-      <main className="container max-w-5xl mx-auto px-4 py-8">
+      <main className="container max-w-5xl mx-auto px-6 py-10">
         <ProgressStepper currentStep={step} />
 
-        {/* Loading overlay */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-24">
+          <div className="flex items-center justify-center py-28">
             <div className="text-center">
-              <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-muted-foreground font-medium animate-pulse-soft">
+              <div className="w-9 h-9 border-2 border-primary/25 border-t-primary rounded-full animate-spin mx-auto mb-5" />
+              <p className="text-base text-muted-foreground animate-pulse-soft">
                 {step === 1 && "Finding trending topics for your ideas…"}
                 {step === 2 && "Generating post titles…"}
                 {step === 3 && "Creating post variants…"}
