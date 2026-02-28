@@ -494,7 +494,9 @@ def register(req: RegisterRequest):
             followers=req.followers,
         )
     except ValueError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        if "already registered" in str(e):
+            raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Registration error: {e}")
     token = _auth.create_access_token(user["id"])
     return {"token": token, "user": _safe_user(user)}
 
