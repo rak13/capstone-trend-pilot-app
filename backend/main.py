@@ -11,6 +11,7 @@ import os
 import re
 import sys
 import warnings
+import requests as http_requests
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
@@ -21,7 +22,8 @@ import joblib
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
@@ -155,6 +157,24 @@ class SavePostRequest(BaseModel):
     content: str
     reactions: int = 0
     comments: int = 0
+
+
+class LinkedInCallbackRequest(BaseModel):
+    code: str
+    state: str  # base64url-encoded JWT of the app user
+
+
+class LinkedInPublishRequest(BaseModel):
+    text: str
+    image_data: Optional[str] = None  # base64 PNG, optional
+
+
+# ── LinkedIn config ─────────────────────────────────────────────────────────────
+
+_LI_CLIENT_ID      = os.getenv("LINKEDIN_CLIENT_ID", "")
+_LI_CLIENT_SECRET  = os.getenv("LINKEDIN_CLIENT_SECRET", "")
+_LI_REDIRECT_URI   = os.getenv("LINKEDIN_REDIRECT_URI", "http://localhost:8000/oauth/callback")
+_LI_FRONTEND_BASE  = os.getenv("LINKEDIN_FRONTEND_BASE", "http://localhost:8080")
 
 
 # ── inline helpers (copied/adapted from app.py) ────────────────────────────────
@@ -521,3 +541,138 @@ def create_post(req: SavePostRequest, current_user: dict = Depends(_current_user
 def list_posts(current_user: dict = Depends(_current_user)):
     """Return all posts created by the authenticated user, newest first."""
     return _auth.get_user_posts(current_user["id"])
+
+
+# ── LinkedIn OAuth routes ───────────────────────────────────────────────────────
+
+@app.get("/oauth/callback", tags=["linkedin"])
+def linkedin_oauth_callback(code: str = "", state: str = "", error: str = ""):
+    """
+    LinkedIn redirects here after user authorises.
+    Exchanges the code for an access token, stores it, then redirects the
+    popup back to the frontend with ?success=true&person_id=... (or ?error=...).
+    """
+    frontend_cb = f"{_LI_FRONTEND_BASE}/oauth/callback"
+
+    if error:
+        return RedirectResponse(f"{frontend_cb}?error={error}")
+
+    if not code or not state:
+        return RedirectResponse(f"{frontend_cb}?error=missing_params")
+
+    # Decode state → app JWT → user_id
+    try:
+        padding = 4 - len(state) % 4
+        jwt_token = base64.urlsafe_b64decode(state + "=" * padding).decode()
+        user_id = _auth.decode_token(jwt_token)
+        if not user_id:
+            return RedirectResponse(f"{frontend_cb}?error=invalid_state")
+    except Exception:
+        return RedirectResponse(f"{frontend_cb}?error=bad_state")
+
+    # Exchange code for LinkedIn access token
+    token_res = http_requests.post(
+        "https://www.linkedin.com/oauth/v2/accessToken",
+        data={
+            "grant_type":    "authorization_code",
+            "code":          code,
+            "redirect_uri":  _LI_REDIRECT_URI,
+            "client_id":     _LI_CLIENT_ID,
+            "client_secret": _LI_CLIENT_SECRET,
+        },
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=15,
+    )
+    if not token_res.ok:
+        return RedirectResponse(f"{frontend_cb}?error=token_exchange_failed")
+
+    li_access_token = token_res.json().get("access_token")
+    if not li_access_token:
+        return RedirectResponse(f"{frontend_cb}?error=no_access_token")
+
+    # Fetch LinkedIn person ID via OpenID userinfo
+    userinfo_res = http_requests.get(
+        "https://api.linkedin.com/v2/userinfo",
+        headers={"Authorization": f"Bearer {li_access_token}"},
+        timeout=10,
+    )
+    if not userinfo_res.ok:
+        return RedirectResponse(f"{frontend_cb}?error=userinfo_failed")
+
+    person_id = userinfo_res.json().get("sub")
+    if not person_id:
+        return RedirectResponse(f"{frontend_cb}?error=no_person_id")
+
+    _auth.save_linkedin_token(user_id, li_access_token, person_id)
+    return RedirectResponse(f"{frontend_cb}?success=true&person_id={person_id}")
+
+
+@app.post("/api/linkedin/post", tags=["linkedin"])
+def linkedin_post(req: LinkedInPublishRequest, current_user: dict = Depends(_current_user)):
+    """Publish a post (text + optional image) to the authenticated user's LinkedIn feed."""
+    li_token, person_id = _auth.get_linkedin_token(current_user["id"])
+    if not li_token or not person_id:
+        raise HTTPException(status_code=400, detail="LinkedIn account not connected. Please authorise first.")
+
+    headers = {
+        "Authorization": f"Bearer {li_token}",
+        "Content-Type":  "application/json",
+        "X-Restli-Protocol-Version": "2.0.0",
+    }
+    author_urn = f"urn:li:person:{person_id}"
+
+    # ── Optional: upload image ──────────────────────────────────────────────────
+    asset_urn: Optional[str] = None
+    if req.image_data:
+        try:
+            # 1. Register upload
+            reg_res = http_requests.post(
+                "https://api.linkedin.com/v2/assets?action=registerUpload",
+                headers=headers,
+                json={
+                    "registerUploadRequest": {
+                        "recipes": ["urn:li:digitalmediaRecipe:feedshare-image"],
+                        "owner": author_urn,
+                        "serviceRelationships": [{
+                            "relationshipType": "OWNER",
+                            "identifier": "urn:li:userGeneratedContent",
+                        }],
+                    }
+                },
+                timeout=15,
+            )
+            if reg_res.ok:
+                upload_url  = reg_res.json()["value"]["uploadMechanism"]["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]["uploadUrl"]
+                asset_urn   = reg_res.json()["value"]["asset"]
+                image_bytes = base64.b64decode(req.image_data)
+                http_requests.put(upload_url, data=image_bytes,
+                                  headers={"Authorization": f"Bearer {li_token}"}, timeout=30)
+        except Exception:
+            asset_urn = None  # fall back to text-only if image upload fails
+
+    # ── Build post payload ──────────────────────────────────────────────────────
+    share_content: dict = {
+        "shareCommentary": {"text": req.text},
+        "shareMediaCategory": "IMAGE" if asset_urn else "NONE",
+    }
+    if asset_urn:
+        share_content["media"] = [{"status": "READY", "media": asset_urn}]
+
+    post_payload = {
+        "author": author_urn,
+        "lifecycleState": "PUBLISHED",
+        "specificContent": {"com.linkedin.ugc.ShareContent": share_content},
+        "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"},
+    }
+
+    post_res = http_requests.post(
+        "https://api.linkedin.com/v2/ugcPosts",
+        headers=headers,
+        json=post_payload,
+        timeout=15,
+    )
+    if not post_res.ok:
+        raise HTTPException(status_code=400, detail=f"LinkedIn post failed: {post_res.text}")
+
+    post_id = post_res.headers.get("x-restli-id", "")
+    return {"success": True, "post_id": post_id, "url": "https://www.linkedin.com/feed/"}

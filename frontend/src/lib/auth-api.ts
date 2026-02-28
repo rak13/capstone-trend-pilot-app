@@ -80,3 +80,25 @@ export async function fetchUserPosts(token: string): Promise<SavedPost[]> {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+export async function exchangeLinkedInCode(
+  code: string,
+  state: string,
+): Promise<{ success: boolean; person_id: string }> {
+  return authFetch("/api/auth/linkedin/callback", {
+    method: "POST",
+    body: JSON.stringify({ code, state }),
+  });
+}
+
+export async function publishToLinkedIn(
+  token: string,
+  text: string,
+  imageData?: string | null,
+): Promise<{ success: boolean; post_id: string; url: string }> {
+  return authFetch("/api/linkedin/post", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ text, image_data: imageData ?? null }),
+  });
+}
