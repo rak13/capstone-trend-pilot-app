@@ -11,11 +11,11 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { Rocket, History, LogOut } from "lucide-react";
 
 const Index = () => {
-  const { step, isLoading } = useWizardStore();
+  const { step, isLoading, reset: resetWizard } = useWizardStore();
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
-  const handleLogout = () => { logout(); navigate("/login"); };
+  const handleLogout = () => { logout(); resetWizard(); navigate("/login"); };
 
   return (
     <div className="min-h-screen bg-background">
