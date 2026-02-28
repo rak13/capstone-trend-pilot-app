@@ -19,7 +19,7 @@ const CREATORS = [
   },
   {
     name: "Rakib",
-    role: "LinkedIn Creator",
+    role: "The Architect",
     quote: "What if timing wasn't luck… but a strategy you could execute every single time?",
     body: "The hardest part of posting on LinkedIn isn't writing — it's knowing when. Rakib found that trending topics change daily but the window to post on them is narrow. TrendPilot hands you that window before it closes, every single time.",
   },

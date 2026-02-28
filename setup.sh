@@ -142,12 +142,19 @@ chmod 600 "$APP_DIR/backend/.env"
 log "Secrets written to backend/.env (mode 600, not committed)"
 
 # ── SSL certificate ───────────────────────────────────────────────────────────
+cert_exists() {
+    sudo test -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" 2>/dev/null
+}
+
 if [[ "$SKIP_CERT" == false ]]; then
     step "Obtaining SSL certificate for $DOMAIN"
 
-    if [[ -d "/etc/letsencrypt/live/$DOMAIN" ]]; then
-        warn "Certificate already exists at /etc/letsencrypt/live/$DOMAIN — skipping"
+    if cert_exists; then
+        warn "Certificate already exists for $DOMAIN — skipping issuance"
     else
+        # Remove any existing domain nginx config to avoid conflicting server names
+        sudo rm -f "/etc/nginx/conf.d/$DOMAIN.conf"
+
         # Temporary minimal nginx config so certbot --nginx can find a server block
         sudo tee /etc/nginx/conf.d/_certbot_temp.conf > /dev/null <<NGINXEOF
 server {
@@ -158,7 +165,7 @@ server {
 }
 NGINXEOF
 
-        if ! pgrep -x nginx > /dev/null; then sudo nginx; fi
+        if ! pgrep -x nginx > /dev/null; then sudo nginx; else sudo nginx -s reload; fi
 
         # Build certbot args
         CERTBOT_ARGS=(--nginx -d "$DOMAIN" -d "www.$DOMAIN" --non-interactive --agree-tos)
@@ -175,7 +182,7 @@ NGINXEOF
     fi
 else
     warn "Skipping SSL cert (--skip-cert)"
-    [[ -d "/etc/letsencrypt/live/$DOMAIN" ]] || die "No cert at /etc/letsencrypt/live/$DOMAIN — remove --skip-cert"
+    cert_exists || die "No cert found for $DOMAIN at /etc/letsencrypt/live/$DOMAIN/fullchain.pem — remove --skip-cert"
 fi
 
 # ── deploy Nginx config ───────────────────────────────────────────────────────
