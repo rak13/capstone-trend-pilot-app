@@ -69,7 +69,7 @@
     --shadow-elevated:   0 20px 60px rgba(0,0,0,0.75);
     --glow-primary:      0 0 16px rgba(87,94,207,0.4), 0 0 36px rgba(87,94,207,0.18);
 
-    --font-display: 'Space Grotesk', system-ui, sans-serif;
+    --font-display: 'Inter', system-ui, sans-serif;
     --font-body: 'Inter', system-ui, sans-serif;
   }
 
@@ -144,23 +144,20 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-body);
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 1.25rem;
     letter-spacing: -0.01em;
     line-height: 1.65;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-display);
+    font-family: 'Inter', system-ui, sans-serif;
     letter-spacing: -0.03em;
     line-height: 1.2;
   }
 
   /* Comfortable text sizes */
   p { font-size: 1.25rem; }
-  .text-lg { font-size: 1.375rem; }
-  label, .text-sm { font-size: 1.125rem; }
-  .text-xs { font-size: 1rem; }
 
   ::selection { background: rgba(87, 94, 207, 0.3); }
   :focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
@@ -168,6 +165,11 @@
 
 /* ─── UTILITIES ─────────────────────────────────────────────────────────────── */
 @layer utilities {
+  /* Text size overrides — must be in utilities layer to beat Tailwind defaults */
+  .text-lg { font-size: 1.25rem;  line-height: 1.875rem; }
+  .text-sm { font-size: 1.0625rem; line-height: 1.625rem; }
+  .text-xs { font-size: 0.9375rem; line-height: 1.375rem; }
+
   .gradient-primary  { background: var(--gradient-primary);  }
   .gradient-accent   { background: var(--gradient-accent);   }
   .gradient-hero     { background: var(--gradient-hero);     }
@@ -209,9 +211,15 @@
     100% { background-position:  200% 0; }
   }
 
+  @keyframes float {
+    0%, 100% { transform: translateY(0px);  }
+    50%       { transform: translateY(-7px); }
+  }
+
   .animate-fade-in    { animation: fade-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
   .animate-fade-up    { animation: fade-up 0.38s cubic-bezier(0.22, 1, 0.36, 1) both; }
   .animate-pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
+  .animate-float      { animation: float 4s ease-in-out infinite; }
 
   .skeleton {
     background: linear-gradient(90deg, hsl(var(--muted)), hsl(var(--secondary)), hsl(var(--muted)));
