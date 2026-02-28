@@ -1,4 +1,4 @@
-# LinkedIn Launchpad — Production Deployment (ineedq.com)
+# TrendPilot — Production Deployment (ineedq.com)
 
 Full production setup: EC2 (Amazon Linux 2023) + Nginx + Let's Encrypt SSL + built React frontend.
 
@@ -19,7 +19,7 @@ Browser  →  https://ineedq.com  →  Nginx (443)
 - Nginx serves the built React app from `frontend/dist/`
 - Nginx proxies `/api/*` to FastAPI on localhost — not exposed publicly
 - SSL via Let's Encrypt (auto-renews every 90 days)
-- Backend runs as a systemd service (`launchpad-backend`) — survives reboots
+- Backend runs as a systemd service (`trendpilot-backend`) — survives reboots
 
 ---
 
@@ -82,7 +82,7 @@ The script will:
 8. Write secrets to `backend/.env` (mode 600)
 9. Issue SSL certificate via Let's Encrypt
 10. Deploy `nginx.conf` and start Nginx
-11. Create and start the `launchpad-backend` systemd service
+11. Create and start the `trendpilot-backend` systemd service
 12. Verify the site and API are responding
 
 **Options:**
@@ -120,10 +120,10 @@ export DASHSCOPE_API_KEY="sk-..."
 The backend runs as a systemd service and auto-starts on reboot.
 
 ```bash
-sudo systemctl status  launchpad-backend    # check status
-sudo systemctl restart launchpad-backend    # restart
-sudo systemctl stop    launchpad-backend    # stop
-sudo journalctl -u     launchpad-backend -f # live logs
+sudo systemctl status  trendpilot-backend    # check status
+sudo systemctl restart trendpilot-backend    # restart
+sudo systemctl stop    trendpilot-backend    # stop
+sudo journalctl -u     trendpilot-backend -f # live logs
 ```
 
 ---
@@ -143,7 +143,7 @@ sudo nginx             # start (if not running)
 
 ```bash
 # Backend logs
-sudo journalctl -u launchpad-backend -f
+sudo journalctl -u trendpilot-backend -f
 
 # Nginx error log
 sudo tail -f /var/log/nginx/error.log
@@ -169,6 +169,6 @@ curl https://ineedq.com/api/        # → {"status":"ok",...}
 | `systemctl start nginx` fails | systemd issue despite valid config | Use `sudo nginx` directly (script does this) |
 | Certbot `--nginx` can't install cert | No existing server block for domain | Script handles this with a temp config |
 | `failed to execute PosixPath('dot')` | Graphviz system binary missing | `sudo dnf install -y graphviz` (script does this) |
-| `/api/` returns 502 | Backend not running | `sudo systemctl restart launchpad-backend` |
+| `/api/` returns 502 | Backend not running | `sudo systemctl restart trendpilot-backend` |
 | Site shows old content | dist not rebuilt | Re-run `./setup.sh --skip-cert` |
 | DNS mismatch warning on setup | EC2 got a new IP after restart | Update Namecheap A records, or use Elastic IP |

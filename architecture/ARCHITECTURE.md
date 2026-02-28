@@ -1,4 +1,4 @@
-# LinkedIn Launchpad — Architecture Reference
+# TrendPilot — Architecture Reference
 
 > Generated diagrams covering system overview, user flow, backend, frontend, pipelines, and tech stack.
 > PNG images are pre-rendered from Mermaid source files in [diagrams/](diagrams/).
@@ -174,7 +174,7 @@ Capstone/
 │           └── image/
 │               └── generate_image.py        SD / Alibaba image generator
 │
-├── linkedin-launchpad/
+├── trendpilot/
 │   ├── package.json
 │   ├── vite.config.ts
 │   ├── tailwind.config.ts

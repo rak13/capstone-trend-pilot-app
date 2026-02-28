@@ -1,4 +1,4 @@
-# LinkedIn Launchpad — Running the Project
+# TrendPilot — Running the Project
 
 ---
 

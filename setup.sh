@@ -1,5 +1,5 @@
 #!/bin/bash
-# setup.sh — One-shot production setup for LinkedIn Launchpad
+# setup.sh — One-shot production setup for TrendPilot
 # Run this from the repo root on a fresh Amazon Linux 2023 EC2 instance.
 #
 # Usage:
@@ -43,7 +43,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo -e "\n${BOLD}LinkedIn Launchpad — Production Setup${NC}"
+echo -e "\n${BOLD}TrendPilot — Production Setup${NC}"
 echo "  Domain:  $DOMAIN"
 echo "  App dir: $APP_DIR"
 [[ "$SKIP_CERT"  == true ]] && echo "  [skip-cert]"
@@ -192,9 +192,9 @@ fi
 
 # ── backend systemd service ───────────────────────────────────────────────────
 step "Installing backend systemd service"
-sudo tee /etc/systemd/system/launchpad-backend.service > /dev/null <<EOF
+sudo tee /etc/systemd/system/trendpilot-backend.service > /dev/null <<EOF
 [Unit]
-Description=LinkedIn Launchpad FastAPI Backend
+Description=TrendPilot FastAPI Backend
 After=network.target
 
 [Service]
@@ -210,17 +210,17 @@ WantedBy=multi-user.target
 EOF
 
 sudo systemctl daemon-reload
-sudo systemctl enable launchpad-backend
-sudo systemctl restart launchpad-backend
+sudo systemctl enable trendpilot-backend
+sudo systemctl restart trendpilot-backend
 
 # Give the backend a moment to start
 sleep 3
 
-if sudo systemctl is-active --quiet launchpad-backend; then
+if sudo systemctl is-active --quiet trendpilot-backend; then
     log "Backend service is running"
 else
     warn "Backend service did not start — check logs:"
-    warn "  sudo journalctl -u launchpad-backend -n 50"
+    warn "  sudo journalctl -u trendpilot-backend -n 50"
 fi
 
 # ── verify ────────────────────────────────────────────────────────────────────
@@ -248,9 +248,9 @@ echo "  Site  → https://$DOMAIN"
 echo "  API   → https://$DOMAIN/api/"
 echo ""
 echo "  Backend service commands:"
-echo "    sudo systemctl status launchpad-backend"
-echo "    sudo journalctl -u launchpad-backend -f"
-echo "    sudo systemctl restart launchpad-backend"
+echo "    sudo systemctl status trendpilot-backend"
+echo "    sudo journalctl -u trendpilot-backend -f"
+echo "    sudo systemctl restart trendpilot-backend"
 echo ""
 echo "  To update the app:"
 echo "    git pull && ./setup.sh --skip-cert"
