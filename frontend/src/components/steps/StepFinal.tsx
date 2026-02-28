@@ -251,7 +251,7 @@ const StepFinal = () => {
               <Edit2 className="w-3.5 h-3.5 mr-1.5" /> Edit
             </ToolBtn>
             {editedPost !== finalPost && (
-              <ToolBtn onClick={() => { setEditedPost(finalPost ?? ""); setDraftText(finalPost ?? ""); }}>
+              <ToolBtn onClick={() => { const p = finalPost ?? ""; setEditedPost(p); setDraftText(p); runPrediction(p); }}>
                 <Undo2 className="w-3.5 h-3.5 mr-1.5" /> Reset
               </ToolBtn>
             )}
