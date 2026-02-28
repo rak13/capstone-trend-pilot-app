@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAuthStore } from "@/lib/auth-store";
+import { useWizardStore } from "@/lib/wizard-store";
 import { loginUser, registerUser } from "@/lib/auth-api";
 
 type Tab = "login" | "register";
@@ -12,6 +13,7 @@ type Tab = "login" | "register";
 const Login = () => {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
+  const resetWizard = useWizardStore((s) => s.reset);
   const [tab, setTab] = useState<Tab>("login");
   const formRef = useRef<HTMLDivElement>(null);
 
@@ -39,6 +41,7 @@ const Login = () => {
     setLoading(true);
     try {
       const { token, user } = await loginUser(loginEmail, loginPassword);
+      resetWizard();
       setAuth(token, user);
       navigate("/");
     } catch (err) {
@@ -55,6 +58,7 @@ const Login = () => {
       const { token, user } = await registerUser(
         regEmail, regName, regPassword, regInterests, parseInt(regFollowers) || 1000,
       );
+      resetWizard();
       setAuth(token, user);
       navigate("/");
     } catch (err) {
@@ -95,10 +99,10 @@ const Login = () => {
               TrendPilot
             </h1>
             <p className="text-xl font-display font-medium text-foreground mb-3">
-              The AI Co-Pilot for LinkedIn Creators
+              The AI Co-Pilot for LinkedIn Users
             </p>
             <p className="text-lg text-muted-foreground leading-relaxed max-w-md">
-              Turn live Google Trends into polished LinkedIn posts — personalised to your voice, scored for engagement before you hit publish.
+              Turn your interests with live Google Trends into polished LinkedIn posts — personalised to your voice, scored for engagement before you hit publish.
             </p>
           </div>
 

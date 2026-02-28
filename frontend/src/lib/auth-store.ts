@@ -29,7 +29,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       linkedinConnected: false,
       linkedinPersonId: null,
-      setAuth: (token, user) => set({ token, user }),
+      setAuth: (token, user) => set({ token, user, linkedinConnected: false, linkedinPersonId: null }),
       updateUser: (user) => set({ user }),
       setLinkedIn: (personId) => set({ linkedinConnected: true, linkedinPersonId: personId }),
       clearLinkedIn: () => set({ linkedinConnected: false, linkedinPersonId: null }),

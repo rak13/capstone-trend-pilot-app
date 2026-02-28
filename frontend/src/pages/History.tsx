@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { Rocket, ArrowLeft, MessageSquare, ThumbsUp, Clock, FileText, LogOut } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAuthStore } from "@/lib/auth-store";
+import { useWizardStore } from "@/lib/wizard-store";
 import { fetchUserPosts, type SavedPost } from "@/lib/auth-api";
 
 const History = () => {
   const navigate = useNavigate();
   const { token, user, logout } = useAuthStore();
+  const resetWizard = useWizardStore((s) => s.reset);
   const [posts, setPosts] = useState<SavedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -20,7 +22,7 @@ const History = () => {
       .finally(() => setLoading(false));
   }, [token, navigate]);
 
-  const handleLogout = () => { logout(); navigate("/login"); };
+  const handleLogout = () => { logout(); resetWizard(); navigate("/login"); };
 
   const formatDate = (dateStr: string) => {
     try {
