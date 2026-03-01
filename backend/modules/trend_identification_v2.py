@@ -56,7 +56,7 @@ LinkedIn Bio:
 """
 
     response = client.chat.completions.create(
-        model="gpt-5",
+        model="gpt-4o",
         max_tokens=100,
         messages=[{"role": "user", "content": prompt}],
     )
@@ -298,7 +298,7 @@ Perfect for production RAG systems, chatbots, and any application making high-vo
 """
 
     response = client.chat.completions.create(
-        model="gpt-5",
+        model="gpt-4o",
         max_tokens=600,
         messages=[{"role": "user", "content": prompt}],
     )

@@ -354,7 +354,7 @@ def post_variants(req: PostVariantsRequest):
         prompt = _build_user_prompt(req.post_title, req.profile_text, hook)
         try:
             response = client.chat.completions.create(
-                model="gpt-5",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": MASTER_SYSTEM_PROMPT},
                     {"role": "user",   "content": prompt},
@@ -405,7 +405,7 @@ def refine_post(req: RefinePostRequest):
     user_prompt = f"Existing post:\n{req.post_text}\n\nInstruction:\n{req.instruction}"
     try:
         response = client.chat.completions.create(
-            model="gpt-5",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user",   "content": user_prompt},
