@@ -1,5 +1,5 @@
 """
-LinkedIn Launchpad — FastAPI Backend
+TrendPilot — FastAPI Backend
 Wraps the existing Python modules without modifying them.
 Swagger UI: http://localhost:8000/docs
 """
@@ -73,8 +73,8 @@ async def lifespan(app: FastAPI):
 
 # ── app + CORS ─────────────────────────────────────────────────────────────────
 app = FastAPI(
-    title="LinkedIn Launchpad API",
-    description="Backend API for the LinkedIn Launchpad wizard.",
+    title="TrendPilot API",
+    description="Backend API for the TrendPilot wizard.",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -268,7 +268,7 @@ def _do_predict(post_text: str, followers: int, post_title: str) -> dict:
 
 @app.get("/", tags=["health"])
 def health():
-    return {"status": "ok", "service": "LinkedIn Launchpad API"}
+    return {"status": "ok", "service": "TrendPilot API"}
 
 
 @app.post("/api/trends", tags=["trends"])
@@ -494,7 +494,9 @@ def register(req: RegisterRequest):
             followers=req.followers,
         )
     except ValueError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        if "already registered" in str(e):
+            raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Registration error: {e}")
     token = _auth.create_access_token(user["id"])
     return {"token": token, "user": _safe_user(user)}
 

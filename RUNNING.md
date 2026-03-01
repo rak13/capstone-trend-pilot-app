@@ -1,4 +1,4 @@
-# LinkedIn Launchpad — Running the Project
+# TrendPilot — Running the Project
 
 ---
 
@@ -69,7 +69,7 @@ npm run dev
 ```
 
 - Backend → http://localhost:8000
-- Frontend → http://localhost:8080
+- Frontend → https://localhost:8080
 - Swagger → http://localhost:8000/docs
 
 Both stop when you close the terminal or press `Ctrl+C`.
@@ -118,14 +118,93 @@ kill -9 $(lsof -ti :8000) $(lsof -ti :8080)
 
 ---
 
-## 4. Troubleshooting
+## 4. Production Deployment (ineedq.com on EC2 + Amazon Linux 2023)
+
+### Step 1 — Namecheap DNS
+
+Remove the existing URL Redirect record and replace with:
+
+| Type | Host | Value | TTL |
+|------|------|-------|-----|
+| A Record | @ | 3.25.193.222 | Automatic |
+| A Record | www | 3.25.193.222 | Automatic |
+
+Wait 5–30 minutes for DNS to propagate. Verify with:
+```bash
+nslookup ineedq.com
+```
+
+### Step 2 — EC2 Security Group
+
+In the AWS Console, open inbound rules for your EC2 instance:
+
+| Port | Protocol | Source |
+|------|----------|--------|
+| 80   | TCP | 0.0.0.0/0 |
+| 443  | TCP | 0.0.0.0/0 |
+| 22   | TCP | Your IP only |
+
+You can close port 8080 — Nginx replaces it.
+
+### Step 3 — Install Nginx and Certbot (on EC2)
+
+```bash
+sudo dnf install -y nginx certbot python3-certbot-nginx
+sudo systemctl enable nginx
+sudo systemctl start nginx
+```
+
+### Step 4 — Get SSL certificate
+
+```bash
+sudo certbot --nginx -d ineedq.com -d www.ineedq.com
+```
+
+Follow the prompts. Certbot auto-configures Nginx and sets up auto-renewal.
+
+### Step 5 — Deploy Nginx config
+
+```bash
+sudo cp nginx.conf /etc/nginx/conf.d/ineedq.conf
+sudo nginx -t          # verify config is valid
+sudo systemctl reload nginx
+```
+
+### Step 6 — Build the frontend
+
+```bash
+cd frontend
+npm run build          # outputs to frontend/dist/
+```
+
+### Step 7 — Run the backend
+
+```bash
+cd backend
+export OPENAI_API_KEY="sk-..."
+export DASHSCOPE_API_KEY="sk-..."
+export PYTHONIOENCODING="utf-8"
+nohup uvicorn main:app --host 127.0.0.1 --port 8000 > ../backend.log 2>&1 &
+```
+
+> Note: `--host 127.0.0.1` (not 0.0.0.0) — Nginx proxies to it, no need to expose it publicly.
+
+### Result
+
+- Site → https://ineedq.com
+- API  → https://ineedq.com/api/ (proxied by Nginx to port 8000)
+- SSL auto-renews every 90 days via certbot's systemd timer
+
+---
+
+## 5. Troubleshooting
 
 | Issue                                            | Fix                                                                  |
 | ------------------------------------------------ | -------------------------------------------------------------------- |
 | `ModuleNotFoundError: No module named 'fastapi'` | Run `pip install -r backend/requirements.txt`                        |
 | `/api/trends` times out                          | Normal — takes 20–60s. Wait or check `trend_cache.json`              |
 | `UnicodeEncodeError`                             | Re-run `export PYTHONIOENCODING=utf-8`                               |
-| CORS error in browser                            | Check `frontend/.env.local` has `VITE_API_URL=http://localhost:8000` |
+| CORS error in browser                            | Check `frontend/.env.local` has `VITE_API_URL=` (empty — uses proxy) |
 | `/api/visual` returns error                      | Ollama must be running: `ollama serve`                               |
 | `failed to execute PosixPath('dot')`             | Graphviz binaries not installed — see **Install Graphviz** above     |
 | Models not loaded (503)                          | Backend still starting — wait a few seconds and retry                |

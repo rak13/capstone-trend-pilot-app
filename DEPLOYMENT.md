@@ -1,145 +1,174 @@
-# LinkedIn Launchpad — Domain Deployment (iqneed.com)
+# TrendPilot — Production Deployment (ineedq.com)
 
-How the app is deployed on AWS EC2 behind a custom domain, with no Nginx and no hardcoded IPs.
+Full production setup: EC2 (Amazon Linux 2023) + Nginx + Let's Encrypt SSL + built React frontend.
 
 ---
 
-## How it works
+## Architecture
 
 ```
-iqneed.com  →  Namecheap masked redirect  →  EC2:8080 (Vite dev server)
-                                                    │
-                                          /api/* ───┘ Vite proxy
-                                                    │
-                                          localhost:8000 (FastAPI)
+Browser  →  https://ineedq.com  →  Nginx (443)
+                                      │
+                               /api/* │  proxy_pass
+                                      ↓
+                              FastAPI (127.0.0.1:8000)
+
+                         Everything else → frontend/dist/ (static)
 ```
 
-- The browser only ever talks to port 8080 (Vite)
-- When the React app calls `/api/trends`, Vite intercepts it and forwards it to the FastAPI backend on `localhost:8000`
-- No IP addresses, no ports, no `VITE_API_URL` needed
+- Nginx serves the built React app from `frontend/dist/`
+- Nginx proxies `/api/*` to FastAPI on localhost — not exposed publicly
+- SSL via Let's Encrypt (auto-renews every 90 days)
+- Backend runs as a systemd service (`trendpilot-backend`) — survives reboots
 
 ---
 
-## Namecheap DNS
+## Prerequisites (do once, outside the script)
 
-Keep the existing record:
+### 1 — Namecheap DNS
 
-| Type | Host | Value | Mode |
-|------|------|-------|------|
-| URL Redirect | @ | `http://ec2-3-25-199-255.ap-southeast-2.compute.amazonaws.com:8080` | Masked |
+**Delete** any URL Redirect record (it overrides A records — they cannot coexist).
+Add these A records pointing to your EC2 instance's public IP:
 
-No changes needed here.
+| Type | Host | Value | TTL |
+|------|------|-------|-----|
+| A Record | @ | `<EC2 public IP>` | Automatic |
+| A Record | www | `<EC2 public IP>` | Automatic |
 
----
+Wait 5–30 min for propagation. The setup script will verify this for you.
 
-## AWS EC2 Security Group
+> **Tip:** Assign an [Elastic IP](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/elastic-ip-addresses-eip.html) in the AWS Console so the IP never changes on restart.
 
-Ensure these inbound rules are open:
+### 2 — EC2 Security Group inbound rules
 
-| Port | Purpose |
-|------|---------|
-| 22 | SSH |
-| 8000 | FastAPI backend |
-| 8080 | Vite frontend |
+| Port | Protocol | Source |
+|------|----------|--------|
+| 22   | TCP | Your IP only |
+| 80   | TCP | 0.0.0.0/0 |
+| 443  | TCP | 0.0.0.0/0 |
 
----
+Ports 8000 and 8080 do NOT need to be public.
 
-## What's configured in the codebase
-
-### `frontend/vite.config.ts`
-
-```typescript
-proxy: {
-  '/api': 'http://localhost:8000',
-},
-```
-
-Any `/api/*` request from the React app is forwarded by Vite to the FastAPI backend. No CORS issues, no hardcoded addresses.
-
-### `frontend/src/lib/api.ts`
-
-```typescript
-export const API_BASE_URL = (import.meta.env.VITE_API_URL as string) ?? "";
-```
-
-Defaults to `""` (empty string) → all fetch calls are relative URLs → handled by the Vite proxy above.
-
----
-
-## First-time setup on EC2
+### 3 — Clone the repo on EC2
 
 ```bash
-# 1. Clone / copy the project
-cd /home/ubuntu   # or wherever you want it
-
-# 2. Install backend dependencies
-pip install -r backend/requirements.txt
-
-# 3. Install frontend dependencies
-cd frontend && npm install && cd ..
-
-# 4. Set API keys in backend/.env
-nano backend/.env
-# Fill in: OPENAI_API_KEY and DASHSCOPE_API_KEY
-
-# 5. Clear VITE_API_URL (use Vite proxy instead)
-echo "VITE_API_URL=" > frontend/.env.local
+ssh ec2-user@<EC2-IP>
+git clone <your-repo-url> capstone-trend-pilot-app
+cd capstone-trend-pilot-app
+chmod +x setup.sh
 ```
 
 ---
 
-## Running on EC2
-
-Export secrets once, then start both services in the background:
+## Fresh Install (run once)
 
 ```bash
+# Set your API keys
 export OPENAI_API_KEY="sk-..."
 export DASHSCOPE_API_KEY="sk-..."
-export PYTHONIOENCODING="utf-8"
 
-# Backend
-cd backend
-nohup uvicorn main:app --host 0.0.0.0 --port 8000 > ../backend.log 2>&1 &
-echo "Backend PID: $!"
-
-# Frontend
-cd ../frontend
-nohup npm run dev > ../frontend.log 2>&1 &
-echo "Frontend PID: $!"
+# Run the setup script
+./setup.sh --email you@email.com
 ```
+
+The script will:
+1. Check DNS — shows this instance's IP vs what the domain resolves to, warns if mismatched
+2. Check API keys
+3. Install/verify `python3`, `pip3`, `node`, `npm` (skips if already present)
+4. Install `nginx`, `certbot`, `graphviz` via dnf
+5. Install Python backend dependencies
+6. Fix home directory permissions for Nginx
+7. Build the React frontend
+8. Write secrets to `backend/.env` (mode 600)
+9. Issue SSL certificate via Let's Encrypt
+10. Deploy `nginx.conf` and start Nginx
+11. Create and start the `trendpilot-backend` systemd service
+12. Verify the site and API are responding
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--domain DOMAIN` | Domain name (default: `ineedq.com`) |
+| `--email EMAIL` | Email for Let's Encrypt renewal alerts (recommended) |
+| `--skip-cert` | Skip SSL cert — use when cert already exists |
+| `--skip-build` | Skip `npm install` + build — use when `dist/` is already up to date |
 
 ---
 
-## Managing the processes
+## Updating the App
+
+After pushing new code to the repo:
 
 ```bash
-# Check logs
-tail -f backend.log
-tail -f frontend.log
-
-# Find PIDs
-lsof -ti :8000    # backend
-lsof -ti :8080    # frontend
-
-# Stop both
-kill $(lsof -ti :8000) $(lsof -ti :8080)
-```
-
----
-
-## Updating the app
-
-```bash
-# Pull latest code
+ssh ec2-user@<EC2-IP>
+cd capstone-trend-pilot-app
 git pull
 
-# Restart backend
-kill $(lsof -ti :8000)
-cd backend
-nohup uvicorn main:app --host 0.0.0.0 --port 8000 > ../backend.log 2>&1 &
+export OPENAI_API_KEY="sk-..."
+export DASHSCOPE_API_KEY="sk-..."
 
-# Restart frontend
-kill $(lsof -ti :8080)
-cd ../frontend
-nohup npm run dev > ../frontend.log 2>&1 &
+./setup.sh --skip-cert
 ```
+
+`--skip-cert` skips SSL issuance (cert already exists) but still rebuilds the frontend, reinstalls Python deps, and restarts the backend service.
+
+---
+
+## Backend Service Management
+
+The backend runs as a systemd service and auto-starts on reboot.
+
+```bash
+sudo systemctl status  trendpilot-backend    # check status
+sudo systemctl restart trendpilot-backend    # restart
+sudo systemctl stop    trendpilot-backend    # stop
+sudo journalctl -u     trendpilot-backend -f # live logs
+```
+
+---
+
+## Nginx Management
+
+```bash
+sudo nginx -t          # test config syntax
+sudo nginx -s reload   # reload config (no downtime)
+sudo nginx -s stop     # stop
+sudo nginx             # start (if not running)
+```
+
+---
+
+## Logs
+
+```bash
+# Backend logs
+sudo journalctl -u trendpilot-backend -f
+
+# Nginx error log
+sudo tail -f /var/log/nginx/error.log
+```
+
+---
+
+## Verify Everything Works
+
+```bash
+curl -I https://ineedq.com          # → HTTP/2 200
+curl https://ineedq.com/api/        # → {"status":"ok",...}
+```
+
+---
+
+## Gotchas
+
+| Problem | Cause | Fix |
+|---------|-------|-----|
+| A records not resolving | Namecheap URL Redirect still active | Delete the URL Redirect record entirely |
+| Nginx 500 / Permission denied | Home dir is mode 700 | `chmod o+x /home/ec2-user` (script does this) |
+| `systemctl start nginx` fails | systemd issue despite valid config | Use `sudo nginx` directly (script does this) |
+| Certbot `--nginx` can't install cert | No existing server block for domain | Script handles this with a temp config |
+| `failed to execute PosixPath('dot')` | Graphviz system binary missing | `sudo dnf install -y graphviz` (script does this) |
+| `/api/` returns 502 | Backend not running | `sudo systemctl restart trendpilot-backend` |
+| Site shows old content | dist not rebuilt | Re-run `./setup.sh --skip-cert` |
+| DNS mismatch warning on setup | EC2 got a new IP after restart | Update Namecheap A records, or use Elastic IP |

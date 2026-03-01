@@ -2,22 +2,22 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWizardStore } from "@/lib/wizard-store";
 import { useAuthStore } from "@/lib/auth-store";
-import { fetchVisual, fetchRefinePost } from "@/lib/api";
+import { fetchVisual, fetchRefinePost, fetchPrediction, type EngagementPrediction } from "@/lib/api";
 import { savePost, publishToLinkedIn, checkLinkedInStatus } from "@/lib/auth-api";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Check, Copy, Edit2, Linkedin, Loader2, RefreshCw, RotateCw,
-  Sparkles, Undo2, X, BookmarkCheck, ExternalLink,
+  Check, Copy, Edit2, Heart, Linkedin, Loader2, MessageCircle,
+  RefreshCw, RotateCw, Sparkles, Undo2, X, BookmarkCheck, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 
 const LI_CLIENT_ID   = "86ntx29ps8h86s";
-const LI_REDIRECT    = "http://localhost:8000/oauth/callback";  // backend handles exchange
+const LI_REDIRECT    = `${window.location.origin}/api/oauth/callback`;  // backend handles exchange
 const LI_SCOPE       = "openid profile w_member_social";
 
 const StepFinal = () => {
   const navigate = useNavigate();
-  const { finalPost, chosenTitle, predictions, reset } = useWizardStore();
+  const { finalPost, chosenTitle, predictions, followers, reset } = useWizardStore();
   const { token, linkedinConnected, setLinkedIn, clearLinkedIn } = useAuthStore();
 
   const [editedPost, setEditedPost] = useState(finalPost ?? "");
@@ -34,6 +34,25 @@ const StepFinal = () => {
   const [publishing, setPublishing] = useState(false);
   const [linkedinPostUrl, setLinkedinPostUrl] = useState<string | null>(null);
   const popupRef = useRef<Window | null>(null);
+
+  const [currentPrediction, setCurrentPrediction] = useState<EngagementPrediction | null>(
+    predictions.length > 0 ? predictions[predictions.length - 1] : null,
+  );
+  const [predicting, setPredicting] = useState(predictions.length === 0);
+  const [predError, setPredError] = useState<string | null>(null);
+
+  const runPrediction = (text: string) => {
+    setPredicting(true);
+    setPredError(null);
+    fetchPrediction(text, followers, chosenTitle ?? "")
+      .then(setCurrentPrediction)
+      .catch((e) => setPredError(e instanceof Error ? e.message : "Prediction failed."))
+      .finally(() => setPredicting(false));
+  };
+
+  useEffect(() => {
+    if (predictions.length === 0 && finalPost) runPrediction(finalPost);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [customPrompt, setCustomPrompt] = useState("");
   const [visualLoading, setVisualLoading] = useState(false);
@@ -97,6 +116,7 @@ const StepFinal = () => {
       setDraftText(refined);
       setRefineInstruction("");
       toast.success("Post updated!");
+      runPrediction(refined);
     } catch (err) {
       setRefineError(err instanceof Error ? err.message : "Refinement failed.");
     } finally { setRefineLoading(false); }
@@ -189,11 +209,36 @@ const StepFinal = () => {
         )}
       </div>
 
+      {/* Engagement prediction */}
+      <div className="flex items-center gap-4 bg-secondary/25 border border-border/40 rounded-xl px-5 py-3.5 mb-4">
+        <p className="text-sm font-medium text-muted-foreground mr-auto">Predicted engagement</p>
+        {predicting ? (
+          <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Recalculating…
+          </span>
+        ) : predError ? (
+          <span className="text-sm text-destructive">{predError}</span>
+        ) : currentPrediction ? (
+          <>
+            <span className="flex items-center gap-1.5 text-base font-semibold text-foreground">
+              <Heart className="w-4 h-4 text-rose-500" />
+              {currentPrediction.reactions}
+              <span className="text-xs font-normal text-muted-foreground">likes</span>
+            </span>
+            <span className="flex items-center gap-1.5 text-base font-semibold text-foreground">
+              <MessageCircle className="w-4 h-4 text-primary" />
+              {currentPrediction.comments}
+              <span className="text-xs font-normal text-muted-foreground">comments</span>
+            </span>
+          </>
+        ) : null}
+      </div>
+
       {/* Edit toolbar */}
       <div className="flex flex-wrap gap-2 mb-6">
         {isEditing ? (
           <>
-            <ToolBtn onClick={() => { setEditedPost(draftText); setIsEditing(false); }} primary>
+            <ToolBtn onClick={() => { setEditedPost(draftText); setIsEditing(false); runPrediction(draftText); }} primary>
               <Check className="w-3.5 h-3.5 mr-1.5" /> Save
             </ToolBtn>
             <ToolBtn onClick={() => { setDraftText(editedPost); setIsEditing(false); }}>
@@ -206,7 +251,7 @@ const StepFinal = () => {
               <Edit2 className="w-3.5 h-3.5 mr-1.5" /> Edit
             </ToolBtn>
             {editedPost !== finalPost && (
-              <ToolBtn onClick={() => { setEditedPost(finalPost ?? ""); setDraftText(finalPost ?? ""); }}>
+              <ToolBtn onClick={() => { const p = finalPost ?? ""; setEditedPost(p); setDraftText(p); runPrediction(p); }}>
                 <Undo2 className="w-3.5 h-3.5 mr-1.5" /> Reset
               </ToolBtn>
             )}
