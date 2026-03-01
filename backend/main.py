@@ -211,7 +211,7 @@ Optimize for:
 - Personal insights or transformations
 
 Hard constraints:
-- Target length: 100–200 words
+- Target length: 150–300 words
 - NO external links
 - Minimal promotional language
 - Tone: human, reflective, conversational
