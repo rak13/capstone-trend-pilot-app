@@ -212,6 +212,7 @@ def extract_features(post_text: str, followers: int, post_title: str, loo_mean: 
         "hook_score":               hook_s,
         "has_announcement_hook":    int(hook_type == "announcement"),
         "has_recency_hook":         int(hook_type == "recency"),
+        "has_quote_hook":           int(hook_type == "quote_hook"),
         "has_personal_hook":        int(bool(re.match(r"^(I |After |When |Today |Yesterday |In \d)", post_text.strip()))),
         "starts_with_number":       int(bool(re.match(r"^\s*\d", post_text.strip()))),
         "has_announcement":         int(bool(re.search(r"\b(excited|thrilled|proud|happy|delighted|announcing|announced)\b", post_text, re.I))),

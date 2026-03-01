@@ -1,6 +1,6 @@
 {
-  "saved_at": "2026-02-22 01:42:43",
-  "model_type": "HistGradientBoostingRegressor",
+  "saved_at": "2026-03-01 22:57:33",
+  "model_type": "HistGradientBoostingRegressor + RandomForestRegressor (RF+)",
   "target_transform": "log1p (log(1+y)); predictions back-transformed with expm1",
   "reactions": {
     "file": "hgbr_reactions.pkl",
@@ -12,19 +12,19 @@
       "min_samples_leaf": 20,
       "l2_regularization": 0.1
     },
-    "n_features": 77,
+    "n_features": 78,
     "feature_names_file": "feature_names_reactions.json",
     "loo_stats_file": "loo_stats_reactions.json",
     "test_metrics": {
-      "log_mae": 0.6802218726053821,
-      "log_r2": 0.6446640427720733,
-      "mae": 58.04700285068137,
-      "rmse": 133.02970470347063,
-      "r2": 0.642350536146675,
-      "smape": 61.782826787708764,
-      "medae": 15.234912771228991,
-      "spearman_rho": 0.7099347319976168,
-      "spearman_p": 7.781567387240179e-09
+      "log_mae": 0.5176942604647476,
+      "log_r2": 0.8213521072982826,
+      "mae": 23.089052323396178,
+      "rmse": 56.78463653659029,
+      "r2": 0.8471753743125465,
+      "smape": 57.419410442295074,
+      "medae": 5.382135315584373,
+      "spearman_rho": 0.8370980170416181,
+      "spearman_p": 1.263606570342563e-17
     }
   },
   "comments": {
@@ -41,15 +41,67 @@
     "feature_names_file": "feature_names_comments.json",
     "loo_stats_file": "loo_stats_comments.json",
     "test_metrics": {
-      "log_mae": 0.5923017888765504,
-      "log_r2": 0.7598355939614254,
-      "mae": 8.900555527496762,
-      "rmse": 25.227557026641627,
-      "r2": 0.6163683069317794,
-      "smape": 104.94890484047777,
-      "medae": 1.660763397122393,
-      "spearman_rho": 0.7977695346838815,
-      "spearman_p": 4.039070122902208e-12
+      "log_mae": 0.4985346628279554,
+      "log_r2": 0.7638363665967969,
+      "mae": 5.282259145683519,
+      "rmse": 15.331386737879757,
+      "r2": 0.7556443263398602,
+      "smape": 117.54862381650145,
+      "medae": 0.887302197348955,
+      "spearman_rho": 0.6781363233603914,
+      "spearman_p": 5.437798081979416e-10
+    }
+  },
+  "rf_plus_reactions": {
+    "file": "rf_plus_reactions.pkl",
+    "params": {
+      "n_estimators": 800,
+      "max_depth": 6,
+      "min_samples_leaf": 10,
+      "max_features": 0.5,
+      "criterion": "absolute_error",
+      "oob_score": true
+    },
+    "n_features": 78,
+    "feature_names_file": "feature_names_reactions.json",
+    "loo_stats_file": "loo_stats_reactions.json",
+    "oob_r2": 0.743504643981669,
+    "test_metrics": {
+      "log_mae": 0.5032639036396743,
+      "log_r2": 0.8436940990510333,
+      "mae": 25.462325148062277,
+      "rmse": 63.06886313438474,
+      "r2": 0.81147817070235,
+      "smape": 56.405585149095614,
+      "medae": 5.081534505905189,
+      "spearman_rho": 0.8629269598751355,
+      "spearman_p": 9.709517824249072e-20
+    }
+  },
+  "rf_plus_comments": {
+    "file": "rf_plus_comments.pkl",
+    "params": {
+      "n_estimators": 800,
+      "max_depth": 6,
+      "min_samples_leaf": 10,
+      "max_features": 0.5,
+      "criterion": "absolute_error",
+      "oob_score": true
+    },
+    "n_features": 80,
+    "feature_names_file": "feature_names_comments.json",
+    "loo_stats_file": "loo_stats_comments.json",
+    "oob_r2": 0.7260684472851817,
+    "test_metrics": {
+      "log_mae": 0.4890195326198717,
+      "log_r2": 0.7862434347747251,
+      "mae": 6.035590783651843,
+      "rmse": 18.698949277384948,
+      "r2": 0.6365087537319318,
+      "smape": 132.32741932556215,
+      "medae": 0.7029581008338512,
+      "spearman_rho": 0.7046346549734187,
+      "spearman_p": 5.7379533561841256e-11
     }
   }
 }
