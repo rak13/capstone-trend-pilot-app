@@ -185,6 +185,7 @@ CRITICAL RULE — Version numbers and factual accuracy:
 - ONLY mention a specific version/release if it explicitly appears in the search query data above.
 - If no version is mentioned in the search data, write the post title WITHOUT a version number. Use phrasing like "latest release", "new update", or focus on the concept/trend instead.
 - NEVER fabricate announcements, launches, or features that are not evidenced by the search data.
+- Make it practical. Slightly opinionated. Less promotional. 
 
 Instructions:
 1. Scan ALL rising/breakout searches across all topics — these are the signals with the highest momentum RIGHT NOW.
@@ -192,7 +193,8 @@ Instructions:
 3. For each signal, write ONE post title that hooks directly into that specific search trend.
 4. Each title MUST name the specific thing people are searching for (a tool, comparison, launch, integration, controversy) — not a generic angle.
 5. The post should feel like the author is reacting to something happening NOW, not writing a textbook intro.
-6. If you talk about any technology, then share whats new, what is new features as well. example, while describing topic hats new in java, we need to talk about, Virtual Threads (Project Loom) — FINAL, Pattern Matching Enhancements, Sequenced Collections, String Templates (Preview) with examples 
+6. If you talk about any technology, then share whats new, what is new features as well. example, while describing topic hats new in java, we need to talk about, Virtual Threads (Project Loom) — FINAL, Pattern Matching Enhancements, Sequenced Collections, String Templates (Preview) with examples.
+
 
 BAD examples (too generic, outdated or fabricated versions — avoid these):
 - "Unlocking New Potentials: How AWS Transforms Cloud Architecture"

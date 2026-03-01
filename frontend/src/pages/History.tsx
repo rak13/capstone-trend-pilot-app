@@ -32,10 +32,7 @@ const History = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header
-        className="border-b border-border/50 sticky top-0 z-50"
-        style={{ background: "rgba(27,27,27,0.85)", backdropFilter: "blur(16px)" }}
-      >
+      <header className="nav-glass border-b border-border/50 sticky top-0 z-50">
         <div className="container max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-lg gradient-primary flex items-center justify-center glow-primary">
@@ -51,7 +48,7 @@ const History = () => {
             <button
               onClick={() => navigate("/")}
               className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-medium
-                text-muted-foreground hover:text-foreground hover:bg-white/5
+                text-muted-foreground hover:text-foreground nav-btn
                 transition-all duration-200"
             >
               <ArrowLeft className="w-5 h-5" /> Create Post
@@ -59,7 +56,7 @@ const History = () => {
             <ThemeToggle />
             <button onClick={handleLogout} aria-label="Sign out"
               className="w-11 h-11 rounded-lg flex items-center justify-center
-                text-muted-foreground hover:text-foreground hover:bg-white/5
+                text-muted-foreground hover:text-foreground nav-btn
                 transition-all duration-200"
             >
               <LogOut className="w-5 h-5" />

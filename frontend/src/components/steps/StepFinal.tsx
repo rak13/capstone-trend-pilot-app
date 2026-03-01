@@ -6,7 +6,7 @@ import { fetchVisual, fetchRefinePost, fetchPrediction, type EngagementPredictio
 import { savePost, publishToLinkedIn, checkLinkedInStatus } from "@/lib/auth-api";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Check, Copy, Edit2, Heart, Linkedin, Loader2, MessageCircle,
+  ArrowLeft, Check, Copy, Edit2, Heart, Linkedin, Loader2, MessageCircle,
   RefreshCw, RotateCw, Sparkles, Undo2, X, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -17,7 +17,7 @@ const LI_SCOPE       = "openid profile w_member_social";
 
 const StepFinal = () => {
   const navigate = useNavigate();
-  const { finalPost, chosenTitle, predictions, followers, reset } = useWizardStore();
+  const { finalPost, chosenTitle, predictions, followers, reset, setStep } = useWizardStore();
   const { token, linkedinConnected, setLinkedIn, clearLinkedIn } = useAuthStore();
 
   const [editedPost, setEditedPost] = useState(finalPost ?? "");
@@ -345,6 +345,14 @@ const StepFinal = () => {
             <ExternalLink className="w-4 h-4" /> View on LinkedIn
           </a>
         )}
+
+        <button onClick={() => setStep(4)}
+          className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
+            border border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5
+            transition-all"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back
+        </button>
 
         <button onClick={reset}
           className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
