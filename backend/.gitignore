@@ -25,4 +25,4 @@ modules/visual_generation/service/visual_service.log
 trend_cache.json
 
 # Database
-*.db
+trendpilot.db
