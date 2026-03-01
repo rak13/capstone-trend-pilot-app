@@ -74,7 +74,7 @@ fi
 
 # ── set LinkedIn env vars ─────────────────────────────────────────────────────
 export LINKEDIN_CLIENT_ID="86ntx29ps8h86s"
-export LINKEDIN_REDIRECT_URI="https://ineedq.com/oauth/callback"
+export LINKEDIN_REDIRECT_URI="https://ineedq.com/api/oauth/callback"
 export LINKEDIN_FRONTEND_BASE="https://ineedq.com"
 export VITE_LINKEDIN_REDIRECT_URI="https://ineedq.com/api/oauth/callback"
 
