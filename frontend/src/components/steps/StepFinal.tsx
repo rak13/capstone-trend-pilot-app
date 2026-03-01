@@ -300,67 +300,73 @@ const StepFinal = () => {
       </div>
 
       {/* Action buttons */}
-      <div className="flex flex-wrap gap-3 justify-center mb-10">
-        <button onClick={handleCopy}
-          className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium text-white
-            gradient-primary glow-primary hover:opacity-90 transition-all"
-        >
-          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-          {copied ? "Copied!" : "Copy to Clipboard"}
-        </button>
+      <div className="flex flex-col gap-3 mb-10">
+        {/* Row 1: primary actions */}
+        <div className="flex flex-wrap gap-3 justify-center">
+          <button onClick={handleCopy}
+            className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium text-white
+              gradient-primary glow-primary hover:opacity-90 transition-all"
+          >
+            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            {copied ? "Copied!" : "Copy to Clipboard"}
+          </button>
 
-        {/* LinkedIn publish flow */}
-        {token && !linkedinConnected && (
-          <button
-            onClick={handleConnectLinkedIn}
+          {/* LinkedIn publish flow */}
+          {token && !linkedinConnected && (
+            <button
+              onClick={handleConnectLinkedIn}
+              className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
+                border border-[#0A66C2]/60 text-[#0A66C2] hover:bg-[#0A66C2]/10
+                transition-all"
+            >
+              <Linkedin className="w-4 h-4" /> Connect LinkedIn
+            </button>
+          )}
+
+          {token && linkedinConnected && !linkedinPostUrl && (
+            <button
+              onClick={handlePublishToLinkedIn}
+              disabled={publishing}
+              className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
+                bg-[#0A66C2] text-white hover:bg-[#0A66C2]/90
+                disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Linkedin className="w-4 h-4" />}
+              {publishing ? "Publishing…" : "Publish to LinkedIn"}
+            </button>
+          )}
+
+          {linkedinPostUrl && (
+            <a
+              href={linkedinPostUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
+                bg-[#0A66C2] text-white hover:bg-[#0A66C2]/90 transition-all"
+            >
+              <ExternalLink className="w-4 h-4" /> View on LinkedIn
+            </a>
+          )}
+        </div>
+
+        {/* Row 2: navigation */}
+        <div className="flex gap-3 justify-center">
+          <button onClick={() => setStep(4)}
             className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
-              border border-[#0A66C2]/60 text-[#0A66C2] hover:bg-[#0A66C2]/10
+              border border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5
               transition-all"
           >
-            <Linkedin className="w-4 h-4" /> Connect LinkedIn
+            <ArrowLeft className="w-4 h-4" /> Back
           </button>
-        )}
 
-        {token && linkedinConnected && !linkedinPostUrl && (
-          <button
-            onClick={handlePublishToLinkedIn}
-            disabled={publishing}
+          <button onClick={reset}
             className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
-              bg-[#0A66C2] text-white hover:bg-[#0A66C2]/90
-              disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              border border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5
+              transition-all"
           >
-            {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Linkedin className="w-4 h-4" />}
-            {publishing ? "Publishing…" : "Publish to LinkedIn"}
+            <RotateCw className="w-4 h-4" /> Start Over
           </button>
-        )}
-
-        {linkedinPostUrl && (
-          <a
-            href={linkedinPostUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
-              bg-[#0A66C2] text-white hover:bg-[#0A66C2]/90 transition-all"
-          >
-            <ExternalLink className="w-4 h-4" /> View on LinkedIn
-          </a>
-        )}
-
-        <button onClick={() => setStep(4)}
-          className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
-            border border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5
-            transition-all"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back
-        </button>
-
-        <button onClick={reset}
-          className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
-            border border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5
-            transition-all"
-        >
-          <RotateCw className="w-4 h-4" /> Start Over
-        </button>
+        </div>
       </div>
 
       {/* Visual */}
