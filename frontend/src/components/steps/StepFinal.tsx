@@ -12,7 +12,7 @@ import {
 import { toast } from "sonner";
 
 const LI_CLIENT_ID   = "86ntx29ps8h86s";
-const LI_REDIRECT    = `${window.location.origin}/api/oauth/callback`;  // backend handles exchange
+const LI_REDIRECT    = import.meta.env.VITE_LINKEDIN_REDIRECT_URI as string;
 const LI_SCOPE       = "openid profile w_member_social";
 
 const StepFinal = () => {
