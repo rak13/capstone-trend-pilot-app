@@ -15,7 +15,9 @@ DASHSCOPE_CHAT_MODEL = os.getenv("DASHSCOPE_CHAT_MODEL", "qwen-plus")
 # Alibaba image generation API URL
 DASHSCOPE_IMAGE_API_URL = os.getenv("DASHSCOPE_IMAGE_API_URL", "https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation")
 # Default image generation parameters
-DASHSCOPE_DEFAULT_SIZE = os.getenv("DASHSCOPE_DEFAULT_SIZE", "1024*1024")
+DASHSCOPE_DEFAULT_SIZE = os.getenv("DASHSCOPE_DEFAULT_SIZE", "1664*928")
+print(f"Using DASHSCOPE_DEFAULT_SIZE: {DASHSCOPE_DEFAULT_SIZE}")
+
 DASHSCOPE_IMAGE_MODEL = os.getenv("DASHSCOPE_IMAGE_MODEL", "qwen-image-plus")
 
 # Output directory for generated artifacts
