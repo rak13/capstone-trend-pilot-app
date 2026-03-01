@@ -109,8 +109,7 @@ const Login = () => {
 
       {/* ── Topbar ── */}
       <header
-        className="sticky top-0 z-50 flex items-center justify-between px-10 py-5 border-b border-border/30"
-        style={{ background: "rgba(14,20,30,0.9)", backdropFilter: "blur(20px)" }}
+        className="nav-glass sticky top-0 z-50 flex items-center justify-between px-10 py-5 border-b border-border/30"
       >
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center glow-primary">
