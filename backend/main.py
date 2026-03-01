@@ -67,8 +67,9 @@ async def lifespan(app: FastAPI):
     _auth.init_db()  # bootstrap SQLite tables
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        mdl_r = joblib.load(ENGMT_DIR / "hgbr_reactions.pkl")
-        mdl_c = joblib.load(ENGMT_DIR / "hgbr_comments.pkl")
+        
+        mdl_r = joblib.load(ENGMT_DIR / "rf_plus_reactions.pkl")
+        mdl_c = joblib.load(ENGMT_DIR / "rf_plus_comments.pkl")
     feat_r = json.loads((ENGMT_DIR / "feature_names_reactions.json").read_text())
     feat_c = json.loads((ENGMT_DIR / "feature_names_comments.json").read_text())
     loo_r  = json.loads((ENGMT_DIR / "loo_stats_reactions.json").read_text())

@@ -29,6 +29,7 @@ const StepFinal = () => {
   const [refineError, setRefineError] = useState<string | null>(null);
 
   const [copied, setCopied] = useState(false);
+  const [copiedImage, setCopiedImage] = useState(false);
   const [saved, setSaved] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [linkedinPostUrl, setLinkedinPostUrl] = useState<string | null>(null);
@@ -84,6 +85,19 @@ const StepFinal = () => {
     generateVisual();
     return () => { abortRef.current.cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleCopyImage = async () => {
+    if (!visualImageData) return;
+    try {
+      const blob = await fetch(`data:${visualContentType};base64,${visualImageData}`).then((r) => r.blob());
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+      setCopiedImage(true);
+      toast.success("Image copied to clipboard!");
+      setTimeout(() => setCopiedImage(false), 2000);
+    } catch {
+      toast.error("Failed to copy image — try right-clicking and copying manually.");
+    }
+  };
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(editedPost);
@@ -260,18 +274,17 @@ const StepFinal = () => {
           <p className="text-sm font-semibold text-foreground">Refine with AI</p>
         </div>
         <p className="text-sm text-muted-foreground mb-4">Give an instruction and the AI will revise while keeping your voice.</p>
-        <div className="flex gap-2.5">
-          <input
-            type="text"
-            value={refineInstruction}
-            onChange={(e) => setRefineInstruction(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !refineLoading && handleRefine()}
-            placeholder='"Make it more concise" or "Add a stronger hook"'
-            className="flex-1 rounded-lg border border-border/60 bg-card px-4 py-2.5 text-sm
-              text-foreground placeholder:text-muted-foreground/45
-              focus:outline-none focus:ring-2 focus:ring-primary/40"
-            disabled={refineLoading}
-          />
+        <Textarea
+          value={refineInstruction}
+          onChange={(e) => setRefineInstruction(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !refineLoading) handleRefine(); }}
+          placeholder='"Make it more concise" or "Add a stronger hook"'
+          className="min-h-[80px] resize-y bg-card border-border/60 focus-visible:ring-primary/40
+            text-foreground placeholder:text-muted-foreground/45 text-sm mb-3"
+          disabled={refineLoading}
+        />
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground/50">Cmd/Ctrl + Enter to apply</p>
           <button
             onClick={handleRefine}
             disabled={refineLoading || !refineInstruction.trim()}
@@ -397,12 +410,21 @@ const StepFinal = () => {
         )}
 
         {visualImageData && (
-          <div className="rounded-xl overflow-hidden border border-border/50">
+          <div className="relative rounded-xl overflow-hidden border border-border/50 group">
             <img
               src={`data:${visualContentType};base64,${visualImageData}`}
               alt="Generated visual"
               className="w-full object-contain max-h-[480px]"
             />
+            <button
+              onClick={handleCopyImage}
+              className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                bg-black/60 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100
+                hover:bg-black/80 transition-all"
+            >
+              {copiedImage ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedImage ? "Copied!" : "Copy Image"}
+            </button>
           </div>
         )}
       </div>
