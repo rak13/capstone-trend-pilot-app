@@ -72,12 +72,20 @@ else
     log "DNS is pointing to this instance"
 fi
 
+# ── set LinkedIn env vars ─────────────────────────────────────────────────────
+export LINKEDIN_CLIENT_ID="86ntx29ps8h86s"
+export LINKEDIN_REDIRECT_URI="https://ineedq.com/oauth/callback"
+export LINKEDIN_FRONTEND_BASE="https://ineedq.com"
+export VITE_LINKEDIN_REDIRECT_URI="https://ineedq.com/api/oauth/callback"
+
 # ── validate required env vars ────────────────────────────────────────────────
 step "Checking API keys"
-[[ -z "${OPENAI_API_KEY:-}" ]]    && die "OPENAI_API_KEY is not set. Run: export OPENAI_API_KEY=sk-..."
-[[ -z "${DASHSCOPE_API_KEY:-}" ]] && die "DASHSCOPE_API_KEY is not set. Run: export DASHSCOPE_API_KEY=sk-..."
+[[ -z "${OPENAI_API_KEY:-}" ]]          && die "OPENAI_API_KEY is not set. Run: export OPENAI_API_KEY=sk-..."
+[[ -z "${DASHSCOPE_API_KEY:-}" ]]       && die "DASHSCOPE_API_KEY is not set. Run: export DASHSCOPE_API_KEY=sk-..."
+[[ -z "${LINKEDIN_CLIENT_SECRET:-}" ]]  && die "LINKEDIN_CLIENT_SECRET is not set. Run: export LINKEDIN_CLIENT_SECRET=..."
 log "OPENAI_API_KEY is set"
 log "DASHSCOPE_API_KEY is set"
+log "LINKEDIN_CLIENT_SECRET is set"
 
 # ── check / install required tools ───────────────────────────────────────────
 step "Checking / installing required tools"
@@ -122,6 +130,7 @@ log "chmod o+x $HOME — Nginx can now reach frontend/dist/"
 if [[ "$SKIP_BUILD" == false ]]; then
     step "Building frontend"
     cd "$APP_DIR/frontend"
+    echo "VITE_LINKEDIN_REDIRECT_URI=$VITE_LINKEDIN_REDIRECT_URI" > .env
     npm install --silent
     npm run build
     cd "$APP_DIR"
@@ -137,6 +146,10 @@ cat > "$APP_DIR/backend/.env" <<EOF
 OPENAI_API_KEY=$OPENAI_API_KEY
 DASHSCOPE_API_KEY=$DASHSCOPE_API_KEY
 PYTHONIOENCODING=utf-8
+LINKEDIN_CLIENT_ID=$LINKEDIN_CLIENT_ID
+LINKEDIN_CLIENT_SECRET=$LINKEDIN_CLIENT_SECRET
+LINKEDIN_REDIRECT_URI=$LINKEDIN_REDIRECT_URI
+LINKEDIN_FRONTEND_BASE=$LINKEDIN_FRONTEND_BASE
 EOF
 chmod 600 "$APP_DIR/backend/.env"
 log "Secrets written to backend/.env (mode 600, not committed)"
