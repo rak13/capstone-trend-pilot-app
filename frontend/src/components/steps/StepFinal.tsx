@@ -337,15 +337,25 @@ const StepFinal = () => {
           )}
 
           {linkedinPostUrl && (
-            <a
-              href={linkedinPostUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
-                bg-[#0A66C2] text-white hover:bg-[#0A66C2]/90 transition-all"
-            >
-              <ExternalLink className="w-4 h-4" /> View on LinkedIn
-            </a>
+            <div className="flex items-center gap-2">
+              <a
+                href={linkedinPostUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
+                  bg-[#0A66C2] text-white hover:bg-[#0A66C2]/90 transition-all"
+              >
+                <ExternalLink className="w-4 h-4" /> View on LinkedIn
+              </a>
+              <button
+                onClick={() => setLinkedinPostUrl(null)}
+                title="Post again"
+                className="p-3 rounded-lg border border-border/60 text-muted-foreground
+                  hover:text-foreground hover:bg-white/5 transition-all"
+              >
+                <RotateCw className="w-4 h-4" />
+              </button>
+            </div>
           )}
         </div>
 
