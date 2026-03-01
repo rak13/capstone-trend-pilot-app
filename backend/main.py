@@ -18,6 +18,11 @@ from typing import Optional
 
 import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+
 import joblib
 import numpy as np
 import pandas as pd
@@ -173,7 +178,7 @@ class LinkedInPublishRequest(BaseModel):
 
 _LI_CLIENT_ID      = os.getenv("LINKEDIN_CLIENT_ID", "")
 _LI_CLIENT_SECRET  = os.getenv("LINKEDIN_CLIENT_SECRET", "")
-_LI_REDIRECT_URI   = os.getenv("LINKEDIN_REDIRECT_URI", "http://localhost:8000/oauth/callback")
+_LI_REDIRECT_URI   = os.getenv("LINKEDIN_REDIRECT_URI", "http://localhost:8000/api/oauth/callback")
 _LI_FRONTEND_BASE  = os.getenv("LINKEDIN_FRONTEND_BASE", "http://localhost:8080")
 
 
@@ -547,7 +552,7 @@ def list_posts(current_user: dict = Depends(_current_user)):
 
 # ── LinkedIn OAuth routes ───────────────────────────────────────────────────────
 
-@app.get("/oauth/callback", tags=["linkedin"])
+@app.get("/api/oauth/callback", tags=["linkedin"])
 def linkedin_oauth_callback(code: str = "", state: str = "", error: str = ""):
     """
     LinkedIn redirects here after user authorises.
@@ -555,11 +560,15 @@ def linkedin_oauth_callback(code: str = "", state: str = "", error: str = ""):
     popup back to the frontend with ?success=true&person_id=... (or ?error=...).
     """
     frontend_cb = f"{_LI_FRONTEND_BASE}/oauth/callback"
+    logger.info("[LinkedIn OAuth] Callback received — code=%s state=%s error=%s",
+                bool(code), bool(state), error or "none")
 
     if error:
+        logger.warning("[LinkedIn OAuth] LinkedIn returned error: %s", error)
         return RedirectResponse(f"{frontend_cb}?error={error}")
 
     if not code or not state:
+        logger.warning("[LinkedIn OAuth] Missing code or state — code=%s state=%s", bool(code), bool(state))
         return RedirectResponse(f"{frontend_cb}?error=missing_params")
 
     # Decode state → app JWT → user_id
@@ -568,11 +577,15 @@ def linkedin_oauth_callback(code: str = "", state: str = "", error: str = ""):
         jwt_token = base64.urlsafe_b64decode(state + "=" * padding).decode()
         user_id = _auth.decode_token(jwt_token)
         if not user_id:
+            logger.warning("[LinkedIn OAuth] State decoded but JWT invalid or expired")
             return RedirectResponse(f"{frontend_cb}?error=invalid_state")
-    except Exception:
+        logger.info("[LinkedIn OAuth] State decoded — user_id=%s", user_id)
+    except Exception as e:
+        logger.exception("[LinkedIn OAuth] Failed to decode state: %s", e)
         return RedirectResponse(f"{frontend_cb}?error=bad_state")
 
     # Exchange code for LinkedIn access token
+    logger.info("[LinkedIn OAuth] Exchanging code for access token (redirect_uri=%s)", _LI_REDIRECT_URI)
     token_res = http_requests.post(
         "https://www.linkedin.com/oauth/v2/accessToken",
         data={
@@ -585,27 +598,39 @@ def linkedin_oauth_callback(code: str = "", state: str = "", error: str = ""):
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         timeout=15,
     )
+    logger.info("[LinkedIn OAuth] Token exchange response — status=%s", token_res.status_code)
     if not token_res.ok:
+        logger.error("[LinkedIn OAuth] Token exchange failed — status=%s body=%s",
+                     token_res.status_code, token_res.text)
         return RedirectResponse(f"{frontend_cb}?error=token_exchange_failed")
 
     li_access_token = token_res.json().get("access_token")
     if not li_access_token:
+        logger.error("[LinkedIn OAuth] No access_token in response: %s", token_res.json())
         return RedirectResponse(f"{frontend_cb}?error=no_access_token")
+    logger.info("[LinkedIn OAuth] Access token obtained successfully")
 
     # Fetch LinkedIn person ID via OpenID userinfo
+    logger.info("[LinkedIn OAuth] Fetching userinfo from LinkedIn")
     userinfo_res = http_requests.get(
         "https://api.linkedin.com/v2/userinfo",
         headers={"Authorization": f"Bearer {li_access_token}"},
         timeout=10,
     )
+    logger.info("[LinkedIn OAuth] Userinfo response — status=%s", userinfo_res.status_code)
     if not userinfo_res.ok:
+        logger.error("[LinkedIn OAuth] Userinfo failed — status=%s body=%s",
+                     userinfo_res.status_code, userinfo_res.text)
         return RedirectResponse(f"{frontend_cb}?error=userinfo_failed")
 
     person_id = userinfo_res.json().get("sub")
     if not person_id:
+        logger.error("[LinkedIn OAuth] No 'sub' in userinfo response: %s", userinfo_res.json())
         return RedirectResponse(f"{frontend_cb}?error=no_person_id")
+    logger.info("[LinkedIn OAuth] person_id=%s — saving token to DB for user_id=%s", person_id, user_id)
 
     _auth.save_linkedin_token(user_id, li_access_token, person_id)
+    logger.info("[LinkedIn OAuth] Session created — redirecting popup to frontend")
     return RedirectResponse(f"{frontend_cb}?success=true&person_id={person_id}")
 
 
