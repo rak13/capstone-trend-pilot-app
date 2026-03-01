@@ -7,7 +7,7 @@ import { savePost, publishToLinkedIn, checkLinkedInStatus } from "@/lib/auth-api
 import { Textarea } from "@/components/ui/textarea";
 import {
   Check, Copy, Edit2, Heart, Linkedin, Loader2, MessageCircle,
-  RefreshCw, RotateCw, Sparkles, Undo2, X, BookmarkCheck, ExternalLink,
+  RefreshCw, RotateCw, Sparkles, Undo2, X, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,7 +29,6 @@ const StepFinal = () => {
   const [refineError, setRefineError] = useState<string | null>(null);
 
   const [copied, setCopied] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [linkedinPostUrl, setLinkedinPostUrl] = useState<string | null>(null);
@@ -93,19 +92,6 @@ const StepFinal = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSavePost = async () => {
-    if (!token) return;
-    setSaving(true);
-    try {
-      const latest = predictions[predictions.length - 1];
-      await savePost(token, chosenTitle ?? "", editedPost, latest?.reactions ?? 0, latest?.comments ?? 0);
-      setSaved(true);
-      toast.success("Post saved to My Posts!");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save post.");
-    } finally { setSaving(false); }
-  };
-
   const handleRefine = async () => {
     if (!refineInstruction.trim()) return;
     setRefineLoading(true);
@@ -139,7 +125,15 @@ const StepFinal = () => {
     try {
       const { url } = await publishToLinkedIn(token, editedPost, visualImageData);
       setLinkedinPostUrl(url);
-      toast.success("Published to LinkedIn!");
+      // Auto-save to history on successful publish
+      try {
+        const latest = predictions[predictions.length - 1];
+        await savePost(token, chosenTitle ?? "", editedPost, latest?.reactions ?? 0, latest?.comments ?? 0);
+        setSaved(true);
+        toast.success("Published to LinkedIn and saved to My Posts!");
+      } catch {
+        toast.success("Published to LinkedIn!");
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "LinkedIn publish failed.";
       if (msg.includes("not connected")) {
@@ -301,19 +295,6 @@ const StepFinal = () => {
           {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
           {copied ? "Copied!" : "Copy to Clipboard"}
         </button>
-
-        {token && (
-          <button
-            onClick={saved ? () => navigate("/history") : handleSavePost}
-            disabled={saving}
-            className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
-              border border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5
-              disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookmarkCheck className="w-4 h-4" />}
-            {saved ? "View My Posts" : saving ? "Saving…" : "Save to History"}
-          </button>
-        )}
 
         {/* LinkedIn publish flow */}
         {token && !linkedinConnected && (
