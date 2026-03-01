@@ -23,3 +23,6 @@ modules/visual_generation/service/visual_service.log
 
 # Trend cache (regenerated at runtime)
 trend_cache.json
+
+# Database
+*.db
