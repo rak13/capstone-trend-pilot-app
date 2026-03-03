@@ -36,7 +36,7 @@ const initialState = {
   step: 1,
   profileText: "",
   followers: 1000,
-  selectedModel: "gpt-5",
+  selectedModel: "gpt-4o",
   trendingTopics: [],
   chosenTopic: null,
   postTitles: [],
