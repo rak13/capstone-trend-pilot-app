@@ -99,6 +99,7 @@ app.add_middleware(
 class TrendsRequest(BaseModel):
     profile_text: str
     followers: int = 1000
+    model: str = "gpt-5"
 
 
 class RisingQuery(BaseModel):
@@ -117,11 +118,13 @@ class PostTitlesRequest(BaseModel):
     trending_topics: list[TrendingTopicIn]
     profile_text: str
     chosen_topic: Optional[str] = None
+    model: str = "gpt-5"
 
 
 class PostVariantsRequest(BaseModel):
     post_title: str
     profile_text: str
+    model: str = "gpt-5"
 
 
 class PredictRequest(BaseModel):
@@ -137,6 +140,7 @@ class VisualRequest(BaseModel):
 class RefinePostRequest(BaseModel):
     post_text: str
     instruction: str
+    model: str = "gpt-5"
 
 
 # ── Auth schemas ───────────────────────────────────────────────────────────────
@@ -285,7 +289,7 @@ def trends(req: TrendsRequest):
     Calls Google Trends + GPT-5. Expect 20-60s response time.
     """
     try:
-        df = get_trending_topics(req.profile_text)
+        df = get_trending_topics(req.profile_text, model=req.model)
     except Exception as e:
         logger.exception("Trend analysis failed")
         raise HTTPException(status_code=500, detail=f"Trend analysis failed: {e}")
@@ -332,7 +336,7 @@ def post_titles(req: PostTitlesRequest):
     df = pd.DataFrame(records)
 
     try:
-        raw = select_post_topic(df, req.profile_text, chosen_topic=req.chosen_topic)
+        raw = select_post_topic(df, req.profile_text, chosen_topic=req.chosen_topic, model=req.model)
     except Exception as e:
         logger.exception("Title generation failed")
         raise HTTPException(status_code=500, detail=f"Title generation failed: {e}")
@@ -353,15 +357,15 @@ def post_variants(req: PostVariantsRequest):
         client = OpenAI()
         prompt = _build_user_prompt(req.post_title, req.profile_text, hook)
         response = client.chat.completions.create(
-            model="gpt-5",
+            model=req.model,
             messages=[
                 {"role": "system", "content": MASTER_SYSTEM_PROMPT},
                 {"role": "user",   "content": prompt},
             ],
         )
         text = (response.choices[0].message.content or "").strip()
-        logger.info("GPT-5 post variant [%s] finish_reason=%s length=%d",
-                    hook.split("—")[0].strip(), response.choices[0].finish_reason, len(text))
+        logger.info("%s post variant [%s] finish_reason=%s length=%d",
+                    req.model, hook.split("—")[0].strip(), response.choices[0].finish_reason, len(text))
         return {
             "hook":      hook,
             "hook_style": hook.split("—")[0].strip(),
@@ -421,7 +425,7 @@ def refine_post(req: RefinePostRequest):
     user_prompt = f"Existing post:\n{req.post_text}\n\nInstruction:\n{req.instruction}"
     try:
         response = client.chat.completions.create(
-            model="gpt-5",
+            model=req.model,
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user",   "content": user_prompt},
@@ -456,7 +460,7 @@ def visual(req: VisualRequest):
             return {"image_data": None, "content_type": "image/png", "error": "No visual generated for this content"}
     except Exception as e:
         logger.exception("Visual generation error")
-        raise HTTPException(status_code=500, detail=f"Visual generation error: {e}")
+        return {"image_data": None, "content_type": "image/png", "error": f"Visual generation failed: {e}"}
 
     if not image_path or not os.path.exists(image_path):
         return {"image_data": None, "content_type": "image/png", "error": f"Image file not found: {image_path}"}

@@ -5,6 +5,7 @@ interface WizardState {
   step: number;
   profileText: string;
   followers: number;
+  selectedModel: string;
   trendingTopics: TrendingTopic[];
   chosenTopic: string | null;
   postTitles: PostTitle[];
@@ -18,6 +19,7 @@ interface WizardState {
   setStep: (step: number) => void;
   setProfileText: (text: string) => void;
   setFollowers: (n: number) => void;
+  setSelectedModel: (model: string) => void;
   setTrendingTopics: (topics: TrendingTopic[]) => void;
   setChosenTopic: (topic: string | null) => void;
   setPostTitles: (titles: PostTitle[]) => void;
@@ -34,6 +36,7 @@ const initialState = {
   step: 1,
   profileText: "",
   followers: 1000,
+  selectedModel: "gpt-5",
   trendingTopics: [],
   chosenTopic: null,
   postTitles: [],
@@ -50,6 +53,7 @@ export const useWizardStore = create<WizardState>((set) => ({
   setStep: (step) => set({ step }),
   setProfileText: (profileText) => set({ profileText }),
   setFollowers: (followers) => set({ followers }),
+  setSelectedModel: (selectedModel) => set({ selectedModel }),
   setTrendingTopics: (trendingTopics) => set({ trendingTopics }),
   setChosenTopic: (chosenTopic) => set({ chosenTopic }),
   setPostTitles: (postTitles) => set({ postTitles }),

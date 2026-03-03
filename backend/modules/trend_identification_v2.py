@@ -34,7 +34,7 @@ def is_cache_valid(entry_timestamp):
     return datetime.now(timezone.utc) - cached_time < timedelta(days=CACHE_TTL_DAYS)
 
 # LLM TOPIC EXTRACTION
-def extract_topics_llm(profile_text):
+def extract_topics_llm(profile_text, model="gpt-5"):
     prompt = f"""
 You are analyzing a LinkedIn professional bio.
 
@@ -59,14 +59,14 @@ LinkedIn Bio:
 """
 
     response = client.chat.completions.create(
-        model="gpt-5",
+        model=model,
         max_completion_tokens=4000,
         messages=[{"role": "user", "content": prompt}],
     )
 
     import re
     msg = response.choices[0].message
-    logger.info("GPT-5 finish_reason: %s | refusal: %s | content: %r",
+    logger.info("%s finish_reason: %s | refusal: %s | content: %r", model,
                 response.choices[0].finish_reason, getattr(msg, "refusal", None), msg.content)
     topics_text = msg.content or ""
     # Normalise: strip numbered prefixes (e.g. "1. ", "- "), then split on commas or newlines
@@ -109,9 +109,9 @@ def fetch_trend_data(keyword):
     return score, top_queries, rising_queries
 
 # TREND SCORING PIPELINE
-def get_trending_topics(profile_text):
+def get_trending_topics(profile_text, model="gpt-5"):
     cache = load_cache()
-    extracted_topics = extract_topics_llm(profile_text)
+    extracted_topics = extract_topics_llm(profile_text, model=model)
 
     results = []
 
@@ -155,7 +155,7 @@ def get_trending_topics(profile_text):
     return df
 
 # LLM POST TOPIC SELECTION
-def select_post_topic(trending_df, profile_text, chosen_topic=None):
+def select_post_topic(trending_df, profile_text, chosen_topic=None, model="gpt-5"):
     if chosen_topic:
         top_topics = trending_df[trending_df["topic"] == chosen_topic].to_dict(orient="records")
     else:
@@ -312,7 +312,7 @@ Perfect for production RAG systems, chatbots, and any application making high-vo
 """
 
     response = client.chat.completions.create(
-        model="gpt-5",
+        model=model,
         max_completion_tokens=4000,
         messages=[{"role": "user", "content": prompt}],
     )

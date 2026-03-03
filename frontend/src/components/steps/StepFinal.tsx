@@ -17,7 +17,7 @@ const LI_SCOPE       = "openid profile w_member_social";
 
 const StepFinal = () => {
   const navigate = useNavigate();
-  const { finalPost, chosenTitle, predictions, followers, reset, setStep } = useWizardStore();
+  const { finalPost, chosenTitle, predictions, followers, selectedModel, reset, setStep } = useWizardStore();
   const { token, linkedinConnected, setLinkedIn, clearLinkedIn } = useAuthStore();
 
   const [editedPost, setEditedPost] = useState(finalPost ?? "");
@@ -111,7 +111,7 @@ const StepFinal = () => {
     setRefineLoading(true);
     setRefineError(null);
     try {
-      const refined = await fetchRefinePost(editedPost, refineInstruction.trim());
+      const refined = await fetchRefinePost(editedPost, refineInstruction.trim(), selectedModel);
       setEditedPost(refined);
       setDraftText(refined);
       setRefineInstruction("");

@@ -74,10 +74,11 @@ interface TrendingTopicRaw {
 export async function fetchTrendingTopics(
   profileText: string,
   followers: number,
+  model = "gpt-5",
 ): Promise<TrendingTopic[]> {
   const data = await apiFetch<TrendingTopicRaw[]>(
     "/api/trends",
-    { profile_text: profileText, followers },
+    { profile_text: profileText, followers, model },
     90_000, // slow endpoint — allow up to 90s
   );
   return data.map((d) => ({
@@ -94,6 +95,7 @@ export async function fetchPostTitles(
   trendingTopics: TrendingTopic[],
   profileText: string,
   chosenTopic: string | null,
+  model = "gpt-5",
 ): Promise<PostTitle[]> {
   const body = {
     trending_topics: trendingTopics.map((t) => ({
@@ -104,6 +106,7 @@ export async function fetchPostTitles(
     })),
     profile_text: profileText,
     chosen_topic: chosenTopic,
+    model,
   };
   return apiFetch<PostTitle[]>("/api/post-titles", body, 60_000);
 }
@@ -119,10 +122,11 @@ interface PostVariantRaw {
 export async function fetchPostVariants(
   postTitle: string,
   profileText: string,
+  model = "gpt-5",
 ): Promise<PostVariant[]> {
   const data = await apiFetch<PostVariantRaw[]>(
     "/api/post-variants",
-    { post_title: postTitle, profile_text: profileText },
+    { post_title: postTitle, profile_text: profileText, model },
     120_000,
   );
   return data.map((d) => ({
@@ -148,10 +152,10 @@ export async function fetchPrediction(
 
 // ── Step 5 (optional): Refine post with AI instruction ────────────────────────
 
-export async function fetchRefinePost(postText: string, instruction: string): Promise<string> {
+export async function fetchRefinePost(postText: string, instruction: string, model = "gpt-5"): Promise<string> {
   const data = await apiFetch<{ post_text: string }>(
     "/api/refine-post",
-    { post_text: postText, instruction },
+    { post_text: postText, instruction, model },
     60_000,
   );
   return data.post_text;
