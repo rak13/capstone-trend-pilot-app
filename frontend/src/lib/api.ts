@@ -123,7 +123,7 @@ export async function fetchPostVariants(
   const data = await apiFetch<PostVariantRaw[]>(
     "/api/post-variants",
     { post_title: postTitle, profile_text: profileText },
-    60_000,
+    120_000,
   );
   return data.map((d) => ({
     hookStyle: d.hook_style,

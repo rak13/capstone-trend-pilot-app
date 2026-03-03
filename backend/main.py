@@ -11,6 +11,7 @@ import os
 import re
 import sys
 import warnings
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests as http_requests
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -281,7 +282,7 @@ def health():
 def trends(req: TrendsRequest):
     """
     Step 1 — Extract trending topics from a LinkedIn bio.
-    Calls Google Trends + GPT-4o. Expect 20-60s response time.
+    Calls Google Trends + GPT-5. Expect 20-60s response time.
     """
     try:
         df = get_trending_topics(req.profile_text)
@@ -317,7 +318,7 @@ def trends(req: TrendsRequest):
 def post_titles(req: PostTitlesRequest):
     """
     Step 2 — Generate 3 post title recommendations from trending topics.
-    Uses GPT-4o to select high-momentum signals and craft titles.
+    Uses GPT-5 to select high-momentum signals and craft titles.
     """
     # Rebuild DataFrame expected by select_post_topic
     records = []
@@ -346,32 +347,47 @@ def post_titles(req: PostTitlesRequest):
 def post_variants(req: PostVariantsRequest):
     """
     Step 3 — Generate 3 post variants with different hook styles.
-    Uses GPT-4o-mini.
+    Uses GPT-5. All 3 hooks are called in parallel to reduce latency.
     """
-    client = OpenAI()
-    variants = []
-    for hook in HOOK_STYLES:
+    def _generate_variant(hook: str) -> dict:
+        client = OpenAI()
         prompt = _build_user_prompt(req.post_title, req.profile_text, hook)
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": MASTER_SYSTEM_PROMPT},
-                    {"role": "user",   "content": prompt},
-                ],
-                temperature=0.75,
-            )
-        except Exception as e:
-            logger.exception("Post generation failed")
-            raise HTTPException(status_code=500, detail=f"Post generation failed: {e}")
-
-        text = response.choices[0].message.content.strip()
-        variants.append({
+        response = client.chat.completions.create(
+            model="gpt-5",
+            messages=[
+                {"role": "system", "content": MASTER_SYSTEM_PROMPT},
+                {"role": "user",   "content": prompt},
+            ],
+        )
+        text = (response.choices[0].message.content or "").strip()
+        logger.info("GPT-5 post variant [%s] finish_reason=%s length=%d",
+                    hook.split("—")[0].strip(), response.choices[0].finish_reason, len(text))
+        return {
+            "hook":      hook,
             "hook_style": hook.split("—")[0].strip(),
             "post_text":  text,
             "word_count": len(text.split()),
-        })
-    return variants
+        }
+
+    try:
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            futures = {pool.submit(_generate_variant, hook): hook for hook in HOOK_STYLES}
+            results = {}
+            for future in as_completed(futures):
+                hook = futures[future]
+                try:
+                    results[hook] = future.result()
+                except Exception as e:
+                    logger.exception("Post generation failed for hook: %s", hook)
+                    raise HTTPException(status_code=500, detail=f"Post generation failed: {e}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Post generation failed")
+        raise HTTPException(status_code=500, detail=f"Post generation failed: {e}")
+
+    # Return in original HOOK_STYLES order
+    return [results[h] for h in HOOK_STYLES]
 
 
 @app.post("/api/predict", tags=["engagement"])
@@ -405,12 +421,11 @@ def refine_post(req: RefinePostRequest):
     user_prompt = f"Existing post:\n{req.post_text}\n\nInstruction:\n{req.instruction}"
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-5",
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user",   "content": user_prompt},
             ],
-            temperature=0.7,
         )
     except Exception as e:
         logger.exception("Post refinement failed")

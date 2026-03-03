@@ -1,7 +1,10 @@
+import logging
 import os
 import json
 import time
 from datetime import datetime, timedelta, timezone
+
+logger = logging.getLogger(__name__)
 
 import pandas as pd
 from pytrends.request import TrendReq
@@ -56,13 +59,21 @@ LinkedIn Bio:
 """
 
     response = client.chat.completions.create(
-        model="gpt-4o",
-        max_tokens=100,
+        model="gpt-5",
+        max_completion_tokens=4000,
         messages=[{"role": "user", "content": prompt}],
     )
 
-    topics_text = response.choices[0].message.content
-    topics = [t.strip() for t in topics_text.split(",") if len(t.strip()) > 2]
+    import re
+    msg = response.choices[0].message
+    logger.info("GPT-5 finish_reason: %s | refusal: %s | content: %r",
+                response.choices[0].finish_reason, getattr(msg, "refusal", None), msg.content)
+    topics_text = msg.content or ""
+    # Normalise: strip numbered prefixes (e.g. "1. ", "- "), then split on commas or newlines
+    cleaned = re.sub(r"^\s*[\d\-\*\•]+[\.\)]\s*", "", topics_text, flags=re.MULTILINE)
+    raw_items = re.split(r"[,\n]+", cleaned)
+    topics = [t.strip() for t in raw_items if len(t.strip()) > 2]
+    logger.info("Parsed topics: %s", topics)
     return list(set(topics))  # deduplicate
 
 # GOOGLE TRENDS FETCH
@@ -135,6 +146,9 @@ def get_trending_topics(profile_text):
         })
 
     save_cache(cache)
+
+    if not results:
+        return pd.DataFrame(columns=["topic", "trend_score", "top_queries", "rising_queries"])
 
     df = pd.DataFrame(results)
     df = df.sort_values("trend_score", ascending=False).reset_index(drop=True)
@@ -298,8 +312,8 @@ Perfect for production RAG systems, chatbots, and any application making high-vo
 """
 
     response = client.chat.completions.create(
-        model="gpt-4o",
-        max_tokens=600,
+        model="gpt-5",
+        max_completion_tokens=4000,
         messages=[{"role": "user", "content": prompt}],
     )
 
