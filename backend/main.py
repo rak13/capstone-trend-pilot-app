@@ -11,6 +11,7 @@ import os
 import re
 import sys
 import warnings
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests as http_requests
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -98,6 +99,7 @@ app.add_middleware(
 class TrendsRequest(BaseModel):
     profile_text: str
     followers: int = 1000
+    model: str = "gpt-5"
 
 
 class RisingQuery(BaseModel):
@@ -116,11 +118,13 @@ class PostTitlesRequest(BaseModel):
     trending_topics: list[TrendingTopicIn]
     profile_text: str
     chosen_topic: Optional[str] = None
+    model: str = "gpt-5"
 
 
 class PostVariantsRequest(BaseModel):
     post_title: str
     profile_text: str
+    model: str = "gpt-5"
 
 
 class PredictRequest(BaseModel):
@@ -136,6 +140,7 @@ class VisualRequest(BaseModel):
 class RefinePostRequest(BaseModel):
     post_text: str
     instruction: str
+    model: str = "gpt-5"
 
 
 # ── Auth schemas ───────────────────────────────────────────────────────────────
@@ -281,10 +286,10 @@ def health():
 def trends(req: TrendsRequest):
     """
     Step 1 — Extract trending topics from a LinkedIn bio.
-    Calls Google Trends + GPT-4o. Expect 20-60s response time.
+    Calls Google Trends + GPT-5. Expect 20-60s response time.
     """
     try:
-        df = get_trending_topics(req.profile_text)
+        df = get_trending_topics(req.profile_text, model=req.model)
     except Exception as e:
         logger.exception("Trend analysis failed")
         raise HTTPException(status_code=500, detail=f"Trend analysis failed: {e}")
@@ -317,7 +322,7 @@ def trends(req: TrendsRequest):
 def post_titles(req: PostTitlesRequest):
     """
     Step 2 — Generate 3 post title recommendations from trending topics.
-    Uses GPT-4o to select high-momentum signals and craft titles.
+    Uses GPT-5 to select high-momentum signals and craft titles.
     """
     # Rebuild DataFrame expected by select_post_topic
     records = []
@@ -331,7 +336,7 @@ def post_titles(req: PostTitlesRequest):
     df = pd.DataFrame(records)
 
     try:
-        raw = select_post_topic(df, req.profile_text, chosen_topic=req.chosen_topic)
+        raw = select_post_topic(df, req.profile_text, chosen_topic=req.chosen_topic, model=req.model)
     except Exception as e:
         logger.exception("Title generation failed")
         raise HTTPException(status_code=500, detail=f"Title generation failed: {e}")
@@ -346,32 +351,47 @@ def post_titles(req: PostTitlesRequest):
 def post_variants(req: PostVariantsRequest):
     """
     Step 3 — Generate 3 post variants with different hook styles.
-    Uses GPT-4o-mini.
+    Uses GPT-5. All 3 hooks are called in parallel to reduce latency.
     """
-    client = OpenAI()
-    variants = []
-    for hook in HOOK_STYLES:
+    def _generate_variant(hook: str) -> dict:
+        client = OpenAI()
         prompt = _build_user_prompt(req.post_title, req.profile_text, hook)
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": MASTER_SYSTEM_PROMPT},
-                    {"role": "user",   "content": prompt},
-                ],
-                temperature=0.75,
-            )
-        except Exception as e:
-            logger.exception("Post generation failed")
-            raise HTTPException(status_code=500, detail=f"Post generation failed: {e}")
-
-        text = response.choices[0].message.content.strip()
-        variants.append({
+        response = client.chat.completions.create(
+            model=req.model,
+            messages=[
+                {"role": "system", "content": MASTER_SYSTEM_PROMPT},
+                {"role": "user",   "content": prompt},
+            ],
+        )
+        text = (response.choices[0].message.content or "").strip()
+        logger.info("%s post variant [%s] finish_reason=%s length=%d",
+                    req.model, hook.split("—")[0].strip(), response.choices[0].finish_reason, len(text))
+        return {
+            "hook":      hook,
             "hook_style": hook.split("—")[0].strip(),
             "post_text":  text,
             "word_count": len(text.split()),
-        })
-    return variants
+        }
+
+    try:
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            futures = {pool.submit(_generate_variant, hook): hook for hook in HOOK_STYLES}
+            results = {}
+            for future in as_completed(futures):
+                hook = futures[future]
+                try:
+                    results[hook] = future.result()
+                except Exception as e:
+                    logger.exception("Post generation failed for hook: %s", hook)
+                    raise HTTPException(status_code=500, detail=f"Post generation failed: {e}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Post generation failed")
+        raise HTTPException(status_code=500, detail=f"Post generation failed: {e}")
+
+    # Return in original HOOK_STYLES order
+    return [results[h] for h in HOOK_STYLES]
 
 
 @app.post("/api/predict", tags=["engagement"])
@@ -405,12 +425,11 @@ def refine_post(req: RefinePostRequest):
     user_prompt = f"Existing post:\n{req.post_text}\n\nInstruction:\n{req.instruction}"
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=req.model,
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user",   "content": user_prompt},
             ],
-            temperature=0.7,
         )
     except Exception as e:
         logger.exception("Post refinement failed")
@@ -441,7 +460,7 @@ def visual(req: VisualRequest):
             return {"image_data": None, "content_type": "image/png", "error": "No visual generated for this content"}
     except Exception as e:
         logger.exception("Visual generation error")
-        raise HTTPException(status_code=500, detail=f"Visual generation error: {e}")
+        return {"image_data": None, "content_type": "image/png", "error": f"Visual generation failed: {e}"}
 
     if not image_path or not os.path.exists(image_path):
         return {"image_data": None, "content_type": "image/png", "error": f"Image file not found: {image_path}"}

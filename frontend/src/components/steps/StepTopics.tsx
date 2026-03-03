@@ -4,7 +4,7 @@ import { fetchPostTitles } from "@/lib/api";
 import { ArrowLeft, ArrowRight, Sparkles, TrendingUp } from "lucide-react";
 
 const StepTopics = () => {
-  const { trendingTopics, profileText, setChosenTopic, setPostTitles, setStep, setIsLoading } = useWizardStore();
+  const { trendingTopics, profileText, selectedModel, setChosenTopic, setPostTitles, setStep, setIsLoading } = useWizardStore();
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState("");
 
@@ -14,7 +14,7 @@ const StepTopics = () => {
     const topicForStore = selected || trendingTopics[0]?.topic || "";
     setChosenTopic(topicForStore);
     try {
-      const titles = await fetchPostTitles(trendingTopics, profileText, selected);
+      const titles = await fetchPostTitles(trendingTopics, profileText, selected, selectedModel);
       setPostTitles(titles);
       setStep(3);
     } catch (err) {

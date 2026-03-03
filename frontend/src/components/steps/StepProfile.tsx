@@ -5,10 +5,16 @@ import { fetchTrendingTopics } from "@/lib/api";
 import { updateProfile } from "@/lib/auth-api";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, User, Users } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowRight, User, Users, Cpu } from "lucide-react";
+
+const MODEL_OPTIONS = [
+  { value: "gpt-5",  label: "GPT-5" },
+  { value: "gpt-4o", label: "GPT-4o" },
+];
 
 const StepProfile = () => {
-  const { profileText, followers, setProfileText, setFollowers, setTrendingTopics, setStep, setIsLoading } = useWizardStore();
+  const { profileText, followers, selectedModel, setProfileText, setFollowers, setSelectedModel, setTrendingTopics, setStep, setIsLoading } = useWizardStore();
   const { token, user, updateUser } = useAuthStore();
 
   const defaultBio = profileText || user?.interests || "";
@@ -27,7 +33,7 @@ const StepProfile = () => {
     setFollowers(followersNum);
     if (token) updateProfile(token, bio.trim(), followersNum).then(updateUser).catch(() => {});
     try {
-      const topics = await fetchTrendingTopics(bio.trim(), followersNum);
+      const topics = await fetchTrendingTopics(bio.trim(), followersNum, selectedModel);
       setTrendingTopics(topics);
       setStep(2);
     } catch (err) {
@@ -83,6 +89,26 @@ const StepProfile = () => {
             />
             <span className="text-sm text-muted-foreground">Used by the engagement prediction model</span>
           </div>
+        </div>
+
+        <div>
+          <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
+            <Cpu className="w-4 h-4" />
+            AI Model
+          </label>
+          <Select value={selectedModel} onValueChange={setSelectedModel}>
+            <SelectTrigger className="bg-secondary/40 border-border/60 focus:ring-primary/40 text-foreground max-w-[200px] text-[0.9375rem]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {MODEL_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-muted-foreground/70 mt-2">Used for topic analysis and post generation</p>
         </div>
 
         {error && (

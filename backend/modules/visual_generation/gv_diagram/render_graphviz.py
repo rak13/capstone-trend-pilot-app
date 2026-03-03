@@ -33,10 +33,14 @@ def sanitize_dot_code(dot_code: str) -> str:
         \\n  -> real newline (line separator)
         \\"  -> " (quote in labels)
         \\\\n -> \\n (DOT label newline, preserved as-is)
+    - Quotes unquoted hex color values (e.g. fillcolor=#f0f8ff →
+      fillcolor="#f0f8ff"). In DOT, # starts a comment when unquoted,
+      causing a syntax error on the following line.
     - Strips leading/trailing whitespace.
     - Ensures consistent line endings.
     """
     import json
+    import re
 
     if not isinstance(dot_code, str):
         return ""
@@ -49,6 +53,14 @@ def sanitize_dot_code(dot_code: str) -> str:
             dot_code = dot_code.replace('\\"', '"').replace("\\n", "\n")
     code = dot_code.replace("\r\n", "\n").replace("\r", "\n")
     code = code.strip()
+    # Fix unquoted hex colors: attr=#rrggbb → attr="#rrggbb"
+    # In DOT, an unquoted # is treated as a comment, truncating the attribute.
+    code = re.sub(r'(=\s*)(#[0-9a-fA-F]{3,8})\b', r'\1"\2"', code)
+    # Strip bare rank-constraint blocks: {rank=same; A; B; ...}
+    # Nodes already inside cluster subgraphs that also appear in rank constraints
+    # trigger a known Graphviz memory bug (SIGSEGV). These blocks are optional
+    # layout hints — removing them is safe.
+    code = re.sub(r'\{\s*rank\s*=\s*\w+\s*;[^}]*\}', '', code)
     return code
 
 

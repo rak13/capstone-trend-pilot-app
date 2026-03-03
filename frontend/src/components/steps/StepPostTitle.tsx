@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, ArrowRight, Check, Lightbulb, Pencil } from "lucide-react";
 
 const StepPostTitle = () => {
-  const { postTitles, profileText, setChosenTitle, setPostVariants, setStep, setIsLoading } = useWizardStore();
+  const { postTitles, profileText, selectedModel, setChosenTitle, setPostVariants, setStep, setIsLoading } = useWizardStore();
   const [selectedIdx, setSelectedIdx] = useState<number | "custom" | null>(null);
   const [customTitle, setCustomTitle] = useState("");
   const [error, setError] = useState("");
@@ -23,7 +23,7 @@ const StepPostTitle = () => {
     setIsLoading(true);
     setError("");
     try {
-      const variants = await fetchPostVariants(resolvedTitle, profileText);
+      const variants = await fetchPostVariants(resolvedTitle, profileText, selectedModel);
       setPostVariants(variants);
       setStep(4);
     } catch (err) {

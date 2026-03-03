@@ -1,7 +1,10 @@
+import logging
 import os
 import json
 import time
 from datetime import datetime, timedelta, timezone
+
+logger = logging.getLogger(__name__)
 
 import pandas as pd
 from pytrends.request import TrendReq
@@ -31,7 +34,7 @@ def is_cache_valid(entry_timestamp):
     return datetime.now(timezone.utc) - cached_time < timedelta(days=CACHE_TTL_DAYS)
 
 # LLM TOPIC EXTRACTION
-def extract_topics_llm(profile_text):
+def extract_topics_llm(profile_text, model="gpt-5"):
     prompt = f"""
 You are analyzing a LinkedIn professional bio.
 
@@ -56,13 +59,21 @@ LinkedIn Bio:
 """
 
     response = client.chat.completions.create(
-        model="gpt-4o",
-        max_tokens=100,
+        model=model,
+        max_completion_tokens=4000,
         messages=[{"role": "user", "content": prompt}],
     )
 
-    topics_text = response.choices[0].message.content
-    topics = [t.strip() for t in topics_text.split(",") if len(t.strip()) > 2]
+    import re
+    msg = response.choices[0].message
+    logger.info("%s finish_reason: %s | refusal: %s | content: %r", model,
+                response.choices[0].finish_reason, getattr(msg, "refusal", None), msg.content)
+    topics_text = msg.content or ""
+    # Normalise: strip numbered prefixes (e.g. "1. ", "- "), then split on commas or newlines
+    cleaned = re.sub(r"^\s*[\d\-\*\•]+[\.\)]\s*", "", topics_text, flags=re.MULTILINE)
+    raw_items = re.split(r"[,\n]+", cleaned)
+    topics = [t.strip() for t in raw_items if len(t.strip()) > 2]
+    logger.info("Parsed topics: %s", topics)
     return list(set(topics))  # deduplicate
 
 # GOOGLE TRENDS FETCH
@@ -98,9 +109,9 @@ def fetch_trend_data(keyword):
     return score, top_queries, rising_queries
 
 # TREND SCORING PIPELINE
-def get_trending_topics(profile_text):
+def get_trending_topics(profile_text, model="gpt-5"):
     cache = load_cache()
-    extracted_topics = extract_topics_llm(profile_text)
+    extracted_topics = extract_topics_llm(profile_text, model=model)
 
     results = []
 
@@ -136,12 +147,15 @@ def get_trending_topics(profile_text):
 
     save_cache(cache)
 
+    if not results:
+        return pd.DataFrame(columns=["topic", "trend_score", "top_queries", "rising_queries"])
+
     df = pd.DataFrame(results)
     df = df.sort_values("trend_score", ascending=False).reset_index(drop=True)
     return df
 
 # LLM POST TOPIC SELECTION
-def select_post_topic(trending_df, profile_text, chosen_topic=None):
+def select_post_topic(trending_df, profile_text, chosen_topic=None, model="gpt-5"):
     if chosen_topic:
         top_topics = trending_df[trending_df["topic"] == chosen_topic].to_dict(orient="records")
     else:
@@ -298,8 +312,8 @@ Perfect for production RAG systems, chatbots, and any application making high-vo
 """
 
     response = client.chat.completions.create(
-        model="gpt-4o",
-        max_tokens=600,
+        model=model,
+        max_completion_tokens=4000,
         messages=[{"role": "user", "content": prompt}],
     )
 
