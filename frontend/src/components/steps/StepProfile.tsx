@@ -96,19 +96,21 @@ const StepProfile = () => {
             <Cpu className="w-4 h-4" />
             AI Model
           </label>
-          <Select value={selectedModel} onValueChange={setSelectedModel}>
-            <SelectTrigger className="bg-secondary/40 border-border/60 focus:ring-primary/40 text-foreground max-w-[200px] text-[0.9375rem]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {MODEL_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-sm text-muted-foreground/70 mt-2">Used for topic analysis and post generation</p>
+          <div className="flex items-center gap-4">
+            <Select value={selectedModel} onValueChange={setSelectedModel}>
+              <SelectTrigger className="bg-secondary/40 border-border/60 focus:ring-primary/40 text-foreground max-w-[160px] text-[0.9375rem]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MODEL_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">Used for topic analysis and post generation</span>
+          </div>
         </div>
 
         {error && (
