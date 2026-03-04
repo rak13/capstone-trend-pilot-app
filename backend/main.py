@@ -3,6 +3,7 @@ TrendPilot — FastAPI Backend
 Wraps the existing Python modules without modifying them.
 Swagger UI: http://localhost:8000/docs
 """
+
 from __future__ import annotations
 
 import base64
@@ -39,9 +40,9 @@ logger = logging.getLogger(__name__)
 # ── env + paths ────────────────────────────────────────────────────────────────
 load_dotenv()  # must happen before any module import that reads env vars at import time
 
-BASE_DIR   = Path(__file__).parent
+BASE_DIR = Path(__file__).parent
 MODULE_DIR = BASE_DIR / "modules"
-ENGMT_DIR  = MODULE_DIR / "engagement_prediction"
+ENGMT_DIR = MODULE_DIR / "engagement_prediction"
 VISUAL_DIR = MODULE_DIR / "visual_generation"
 
 # Ensure trend_cache.json is written to backend/ regardless of launch CWD
@@ -55,7 +56,12 @@ sys.path.insert(0, str(VISUAL_DIR / "service"))
 from trend_identification_v2 import get_trending_topics, select_post_topic  # noqa: E402
 from helpers.feature_engineering import extract_features  # noqa: E402
 from openai import OpenAI  # noqa: E402
-from visual_service import run_llm, generate_graphviz_image, generate_mermaid_image, generate_sd_image  # noqa: E402
+from visual_service import (
+    run_llm,
+    generate_graphviz_image,
+    generate_mermaid_image,
+    generate_sd_image,
+)  # noqa: E402
 import auth as _auth  # noqa: E402
 
 # ── model globals ──────────────────────────────────────────────────────────────
@@ -68,13 +74,13 @@ async def lifespan(app: FastAPI):
     _auth.init_db()  # bootstrap SQLite tables
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        
+
         mdl_r = joblib.load(ENGMT_DIR / "rf_plus_reactions.pkl")
         mdl_c = joblib.load(ENGMT_DIR / "rf_plus_comments.pkl")
     feat_r = json.loads((ENGMT_DIR / "feature_names_reactions.json").read_text())
     feat_c = json.loads((ENGMT_DIR / "feature_names_comments.json").read_text())
-    loo_r  = json.loads((ENGMT_DIR / "loo_stats_reactions.json").read_text())
-    loo_c  = json.loads((ENGMT_DIR / "loo_stats_comments.json").read_text())
+    loo_r = json.loads((ENGMT_DIR / "loo_stats_reactions.json").read_text())
+    loo_c = json.loads((ENGMT_DIR / "loo_stats_comments.json").read_text())
     yield
 
 
@@ -96,10 +102,11 @@ app.add_middleware(
 
 # ── Pydantic schemas ───────────────────────────────────────────────────────────
 
+
 class TrendsRequest(BaseModel):
     profile_text: str
     followers: int = 1000
-    model: str = "gpt-5"
+    model: str = "gpt-5-mini"
 
 
 class RisingQuery(BaseModel):
@@ -118,13 +125,13 @@ class PostTitlesRequest(BaseModel):
     trending_topics: list[TrendingTopicIn]
     profile_text: str
     chosen_topic: Optional[str] = None
-    model: str = "gpt-5"
+    model: str = "gpt-5-mini"
 
 
 class PostVariantsRequest(BaseModel):
     post_title: str
     profile_text: str
-    model: str = "gpt-5"
+    model: str = "gpt-5-mini"
 
 
 class PredictRequest(BaseModel):
@@ -140,10 +147,11 @@ class VisualRequest(BaseModel):
 class RefinePostRequest(BaseModel):
     post_text: str
     instruction: str
-    model: str = "gpt-5"
+    model: str = "gpt-5-mini"
 
 
 # ── Auth schemas ───────────────────────────────────────────────────────────────
+
 
 class RegisterRequest(BaseModel):
     email: str
@@ -182,25 +190,32 @@ class LinkedInPublishRequest(BaseModel):
 
 # ── LinkedIn config ─────────────────────────────────────────────────────────────
 
-_LI_CLIENT_ID      = os.getenv("LINKEDIN_CLIENT_ID", "")
-_LI_CLIENT_SECRET  = os.getenv("LINKEDIN_CLIENT_SECRET", "")
-_LI_REDIRECT_URI   = os.getenv("LINKEDIN_REDIRECT_URI", "http://localhost:8000/api/oauth/callback")
-_LI_FRONTEND_BASE  = os.getenv("LINKEDIN_FRONTEND_BASE", "http://localhost:8080")
+_LI_CLIENT_ID = os.getenv("LINKEDIN_CLIENT_ID", "")
+_LI_CLIENT_SECRET = os.getenv("LINKEDIN_CLIENT_SECRET", "")
+_LI_REDIRECT_URI = os.getenv(
+    "LINKEDIN_REDIRECT_URI", "http://localhost:8000/api/oauth/callback"
+)
+_LI_FRONTEND_BASE = os.getenv("LINKEDIN_FRONTEND_BASE", "http://localhost:8080")
 
 
 # ── inline helpers (copied/adapted from app.py) ────────────────────────────────
+
 
 def parse_post_titles(llm_output: str) -> list[dict]:
     """Parse LLM output into [{signal, title}] list."""
     titles = []
     for i in range(1, 4):
         signal_match = re.search(rf"SIGNAL\s+{i}:\s*(.+)", llm_output, re.IGNORECASE)
-        title_match  = re.search(rf"POST\s+TITLE\s+{i}:\s*(.+)", llm_output, re.IGNORECASE)
+        title_match = re.search(
+            rf"POST\s+TITLE\s+{i}:\s*(.+)", llm_output, re.IGNORECASE
+        )
         if title_match:
-            titles.append({
-                "signal": signal_match.group(1).strip() if signal_match else "",
-                "title":  title_match.group(1).strip(),
-            })
+            titles.append(
+                {
+                    "signal": signal_match.group(1).strip() if signal_match else "",
+                    "title": title_match.group(1).strip(),
+                }
+            )
     return titles
 
 
@@ -271,11 +286,12 @@ def _do_predict(post_text: str, followers: int, post_title: str) -> dict:
 
     return {
         "reactions": max(0, round(pred_r)),
-        "comments":  max(0, round(pred_c)),
+        "comments": max(0, round(pred_c)),
     }
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
+
 
 @app.get("/", tags=["health"])
 def health():
@@ -304,17 +320,22 @@ def trends(req: TrendsRequest):
 
         # rising_queries: list of {"query": str, "value": str/int}
         rising_q = [
-            {"query": q["query"], "value": str(q["value"])}
-            if isinstance(q, dict) else {"query": str(q), "value": ""}
+            (
+                {"query": q["query"], "value": str(q["value"])}
+                if isinstance(q, dict)
+                else {"query": str(q), "value": ""}
+            )
             for q in raw_rq
         ]
 
-        topics.append({
-            "topic":         str(row["topic"]),
-            "trend_score":   float(row["trend_score"]),
-            "top_queries":   top_q,
-            "rising_queries": rising_q,
-        })
+        topics.append(
+            {
+                "topic": str(row["topic"]),
+                "trend_score": float(row["trend_score"]),
+                "top_queries": top_q,
+                "rising_queries": rising_q,
+            }
+        )
     return topics
 
 
@@ -327,23 +348,31 @@ def post_titles(req: PostTitlesRequest):
     # Rebuild DataFrame expected by select_post_topic
     records = []
     for t in req.trending_topics:
-        records.append({
-            "topic":          t.topic,
-            "trend_score":    t.trend_score,
-            "top_queries":    [{"query": q, "value": 0} for q in t.top_queries],
-            "rising_queries": [{"query": rq.query, "value": rq.value} for rq in t.rising_queries],
-        })
+        records.append(
+            {
+                "topic": t.topic,
+                "trend_score": t.trend_score,
+                "top_queries": [{"query": q, "value": 0} for q in t.top_queries],
+                "rising_queries": [
+                    {"query": rq.query, "value": rq.value} for rq in t.rising_queries
+                ],
+            }
+        )
     df = pd.DataFrame(records)
 
     try:
-        raw = select_post_topic(df, req.profile_text, chosen_topic=req.chosen_topic, model=req.model)
+        raw = select_post_topic(
+            df, req.profile_text, chosen_topic=req.chosen_topic, model=req.model
+        )
     except Exception as e:
         logger.exception("Title generation failed")
         raise HTTPException(status_code=500, detail=f"Title generation failed: {e}")
 
     parsed = parse_post_titles(raw)
     if not parsed:
-        raise HTTPException(status_code=500, detail=f"Could not parse LLM output:\n{raw}")
+        raise HTTPException(
+            status_code=500, detail=f"Could not parse LLM output:\n{raw}"
+        )
     return parsed
 
 
@@ -353,6 +382,7 @@ def post_variants(req: PostVariantsRequest):
     Step 3 — Generate 3 post variants with different hook styles.
     Uses GPT-5. All 3 hooks are called in parallel to reduce latency.
     """
+
     def _generate_variant(hook: str) -> dict:
         client = OpenAI()
         prompt = _build_user_prompt(req.post_title, req.profile_text, hook)
@@ -360,22 +390,29 @@ def post_variants(req: PostVariantsRequest):
             model=req.model,
             messages=[
                 {"role": "system", "content": MASTER_SYSTEM_PROMPT},
-                {"role": "user",   "content": prompt},
+                {"role": "user", "content": prompt},
             ],
         )
         text = (response.choices[0].message.content or "").strip()
-        logger.info("%s post variant [%s] finish_reason=%s length=%d",
-                    req.model, hook.split("—")[0].strip(), response.choices[0].finish_reason, len(text))
+        logger.info(
+            "%s post variant [%s] finish_reason=%s length=%d",
+            req.model,
+            hook.split("—")[0].strip(),
+            response.choices[0].finish_reason,
+            len(text),
+        )
         return {
-            "hook":      hook,
+            "hook": hook,
             "hook_style": hook.split("—")[0].strip(),
-            "post_text":  text,
+            "post_text": text,
             "word_count": len(text.split()),
         }
 
     try:
         with ThreadPoolExecutor(max_workers=3) as pool:
-            futures = {pool.submit(_generate_variant, hook): hook for hook in HOOK_STYLES}
+            futures = {
+                pool.submit(_generate_variant, hook): hook for hook in HOOK_STYLES
+            }
             results = {}
             for future in as_completed(futures):
                 hook = futures[future]
@@ -383,7 +420,9 @@ def post_variants(req: PostVariantsRequest):
                     results[hook] = future.result()
                 except Exception as e:
                     logger.exception("Post generation failed for hook: %s", hook)
-                    raise HTTPException(status_code=500, detail=f"Post generation failed: {e}")
+                    raise HTTPException(
+                        status_code=500, detail=f"Post generation failed: {e}"
+                    )
     except HTTPException:
         raise
     except Exception as e:
@@ -426,9 +465,10 @@ def refine_post(req: RefinePostRequest):
     try:
         response = client.chat.completions.create(
             model=req.model,
+            reasoning_effort="low",
             messages=[
                 {"role": "system", "content": system},
-                {"role": "user",   "content": user_prompt},
+                {"role": "user", "content": user_prompt},
             ],
         )
     except Exception as e:
@@ -457,13 +497,25 @@ def visual(req: VisualRequest):
         elif typ == "image":
             image_path = generate_sd_image(llm_res.get("prompt", req.post_text))
         else:
-            return {"image_data": None, "content_type": "image/png", "error": "No visual generated for this content"}
+            return {
+                "image_data": None,
+                "content_type": "image/png",
+                "error": "No visual generated for this content",
+            }
     except Exception as e:
         logger.exception("Visual generation error")
-        return {"image_data": None, "content_type": "image/png", "error": f"Visual generation failed: {e}"}
+        return {
+            "image_data": None,
+            "content_type": "image/png",
+            "error": f"Visual generation failed: {e}",
+        }
 
     if not image_path or not os.path.exists(image_path):
-        return {"image_data": None, "content_type": "image/png", "error": f"Image file not found: {image_path}"}
+        return {
+            "image_data": None,
+            "content_type": "image/png",
+            "error": f"Image file not found: {image_path}",
+        }
 
     try:
         with open(image_path, "rb") as f:
@@ -486,7 +538,9 @@ def visual(req: VisualRequest):
 _bearer = HTTPBearer(auto_error=False)
 
 
-def _current_user(creds: Optional[HTTPAuthorizationCredentials] = Depends(_bearer)) -> dict:
+def _current_user(
+    creds: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
+) -> dict:
     if not creds:
         raise HTTPException(status_code=401, detail="Not authenticated")
     user_id = _auth.decode_token(creds.credentials)
@@ -505,11 +559,14 @@ def _safe_user(u: dict) -> dict:
 
 # ── Auth routes ─────────────────────────────────────────────────────────────────
 
+
 @app.post("/api/auth/register", tags=["auth"])
 def register(req: RegisterRequest):
     """Register a new user. Returns JWT token."""
     if not req.email or not req.name or not req.password:
-        raise HTTPException(status_code=400, detail="Email, name, and password are required.")
+        raise HTTPException(
+            status_code=400, detail="Email, name, and password are required."
+        )
     try:
         user = _auth.create_user(
             email=req.email,
@@ -543,13 +600,18 @@ def me(current_user: dict = Depends(_current_user)):
 
 
 @app.put("/api/auth/profile", tags=["auth"])
-def update_profile(req: UpdateProfileRequest, current_user: dict = Depends(_current_user)):
+def update_profile(
+    req: UpdateProfileRequest, current_user: dict = Depends(_current_user)
+):
     """Update interests and followers for the authenticated user."""
-    updated = _auth.update_user_profile(current_user["id"], req.interests, req.followers)
+    updated = _auth.update_user_profile(
+        current_user["id"], req.interests, req.followers
+    )
     return _safe_user(updated)
 
 
 # ── Post history routes ─────────────────────────────────────────────────────────
+
 
 @app.post("/api/posts", tags=["posts"])
 def create_post(req: SavePostRequest, current_user: dict = Depends(_current_user)):
@@ -572,6 +634,7 @@ def list_posts(current_user: dict = Depends(_current_user)):
 
 # ── LinkedIn OAuth routes ───────────────────────────────────────────────────────
 
+
 @app.get("/api/oauth/callback", tags=["linkedin"])
 def linkedin_oauth_callback(code: str = "", state: str = "", error: str = ""):
     """
@@ -580,15 +643,23 @@ def linkedin_oauth_callback(code: str = "", state: str = "", error: str = ""):
     popup back to the frontend with ?success=true&person_id=... (or ?error=...).
     """
     frontend_cb = f"{_LI_FRONTEND_BASE}/oauth/callback"
-    logger.info("[LinkedIn OAuth] Callback received — code=%s state=%s error=%s",
-                bool(code), bool(state), error or "none")
+    logger.info(
+        "[LinkedIn OAuth] Callback received — code=%s state=%s error=%s",
+        bool(code),
+        bool(state),
+        error or "none",
+    )
 
     if error:
         logger.warning("[LinkedIn OAuth] LinkedIn returned error: %s", error)
         return RedirectResponse(f"{frontend_cb}?error={error}")
 
     if not code or not state:
-        logger.warning("[LinkedIn OAuth] Missing code or state — code=%s state=%s", bool(code), bool(state))
+        logger.warning(
+            "[LinkedIn OAuth] Missing code or state — code=%s state=%s",
+            bool(code),
+            bool(state),
+        )
         return RedirectResponse(f"{frontend_cb}?error=missing_params")
 
     # Decode state → app JWT → user_id
@@ -605,28 +676,38 @@ def linkedin_oauth_callback(code: str = "", state: str = "", error: str = ""):
         return RedirectResponse(f"{frontend_cb}?error=bad_state")
 
     # Exchange code for LinkedIn access token
-    logger.info("[LinkedIn OAuth] Exchanging code for access token (redirect_uri=%s)", _LI_REDIRECT_URI)
+    logger.info(
+        "[LinkedIn OAuth] Exchanging code for access token (redirect_uri=%s)",
+        _LI_REDIRECT_URI,
+    )
     token_res = http_requests.post(
         "https://www.linkedin.com/oauth/v2/accessToken",
         data={
-            "grant_type":    "authorization_code",
-            "code":          code,
-            "redirect_uri":  _LI_REDIRECT_URI,
-            "client_id":     _LI_CLIENT_ID,
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": _LI_REDIRECT_URI,
+            "client_id": _LI_CLIENT_ID,
             "client_secret": _LI_CLIENT_SECRET,
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         timeout=15,
     )
-    logger.info("[LinkedIn OAuth] Token exchange response — status=%s", token_res.status_code)
+    logger.info(
+        "[LinkedIn OAuth] Token exchange response — status=%s", token_res.status_code
+    )
     if not token_res.ok:
-        logger.error("[LinkedIn OAuth] Token exchange failed — status=%s body=%s",
-                     token_res.status_code, token_res.text)
+        logger.error(
+            "[LinkedIn OAuth] Token exchange failed — status=%s body=%s",
+            token_res.status_code,
+            token_res.text,
+        )
         return RedirectResponse(f"{frontend_cb}?error=token_exchange_failed")
 
     li_access_token = token_res.json().get("access_token")
     if not li_access_token:
-        logger.error("[LinkedIn OAuth] No access_token in response: %s", token_res.json())
+        logger.error(
+            "[LinkedIn OAuth] No access_token in response: %s", token_res.json()
+        )
         return RedirectResponse(f"{frontend_cb}?error=no_access_token")
     logger.info("[LinkedIn OAuth] Access token obtained successfully")
 
@@ -637,17 +718,28 @@ def linkedin_oauth_callback(code: str = "", state: str = "", error: str = ""):
         headers={"Authorization": f"Bearer {li_access_token}"},
         timeout=10,
     )
-    logger.info("[LinkedIn OAuth] Userinfo response — status=%s", userinfo_res.status_code)
+    logger.info(
+        "[LinkedIn OAuth] Userinfo response — status=%s", userinfo_res.status_code
+    )
     if not userinfo_res.ok:
-        logger.error("[LinkedIn OAuth] Userinfo failed — status=%s body=%s",
-                     userinfo_res.status_code, userinfo_res.text)
+        logger.error(
+            "[LinkedIn OAuth] Userinfo failed — status=%s body=%s",
+            userinfo_res.status_code,
+            userinfo_res.text,
+        )
         return RedirectResponse(f"{frontend_cb}?error=userinfo_failed")
 
     person_id = userinfo_res.json().get("sub")
     if not person_id:
-        logger.error("[LinkedIn OAuth] No 'sub' in userinfo response: %s", userinfo_res.json())
+        logger.error(
+            "[LinkedIn OAuth] No 'sub' in userinfo response: %s", userinfo_res.json()
+        )
         return RedirectResponse(f"{frontend_cb}?error=no_person_id")
-    logger.info("[LinkedIn OAuth] person_id=%s — saving token to DB for user_id=%s", person_id, user_id)
+    logger.info(
+        "[LinkedIn OAuth] person_id=%s — saving token to DB for user_id=%s",
+        person_id,
+        user_id,
+    )
 
     _auth.save_linkedin_token(user_id, li_access_token, person_id)
     logger.info("[LinkedIn OAuth] Session created — redirecting popup to frontend")
@@ -662,15 +754,20 @@ def linkedin_status(current_user: dict = Depends(_current_user)):
 
 
 @app.post("/api/linkedin/post", tags=["linkedin"])
-def linkedin_post(req: LinkedInPublishRequest, current_user: dict = Depends(_current_user)):
+def linkedin_post(
+    req: LinkedInPublishRequest, current_user: dict = Depends(_current_user)
+):
     """Publish a post (text + optional image) to the authenticated user's LinkedIn feed."""
     li_token, person_id = _auth.get_linkedin_token(current_user["id"])
     if not li_token or not person_id:
-        raise HTTPException(status_code=400, detail="LinkedIn account not connected. Please authorise first.")
+        raise HTTPException(
+            status_code=400,
+            detail="LinkedIn account not connected. Please authorise first.",
+        )
 
     headers = {
         "Authorization": f"Bearer {li_token}",
-        "Content-Type":  "application/json",
+        "Content-Type": "application/json",
         "X-Restli-Protocol-Version": "2.0.0",
     }
     author_urn = f"urn:li:person:{person_id}"
@@ -687,20 +784,28 @@ def linkedin_post(req: LinkedInPublishRequest, current_user: dict = Depends(_cur
                     "registerUploadRequest": {
                         "recipes": ["urn:li:digitalmediaRecipe:feedshare-image"],
                         "owner": author_urn,
-                        "serviceRelationships": [{
-                            "relationshipType": "OWNER",
-                            "identifier": "urn:li:userGeneratedContent",
-                        }],
+                        "serviceRelationships": [
+                            {
+                                "relationshipType": "OWNER",
+                                "identifier": "urn:li:userGeneratedContent",
+                            }
+                        ],
                     }
                 },
                 timeout=15,
             )
             if reg_res.ok:
-                upload_url  = reg_res.json()["value"]["uploadMechanism"]["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]["uploadUrl"]
-                asset_urn   = reg_res.json()["value"]["asset"]
+                upload_url = reg_res.json()["value"]["uploadMechanism"][
+                    "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"
+                ]["uploadUrl"]
+                asset_urn = reg_res.json()["value"]["asset"]
                 image_bytes = base64.b64decode(req.image_data)
-                http_requests.put(upload_url, data=image_bytes,
-                                  headers={"Authorization": f"Bearer {li_token}"}, timeout=30)
+                http_requests.put(
+                    upload_url,
+                    data=image_bytes,
+                    headers={"Authorization": f"Bearer {li_token}"},
+                    timeout=30,
+                )
         except Exception:
             asset_urn = None  # fall back to text-only if image upload fails
 
@@ -726,7 +831,13 @@ def linkedin_post(req: LinkedInPublishRequest, current_user: dict = Depends(_cur
         timeout=15,
     )
     if not post_res.ok:
-        raise HTTPException(status_code=400, detail=f"LinkedIn post failed: {post_res.text}")
+        raise HTTPException(
+            status_code=400, detail=f"LinkedIn post failed: {post_res.text}"
+        )
 
     post_id = post_res.headers.get("x-restli-id", "")
-    return {"success": True, "post_id": post_id, "url": "https://www.linkedin.com/feed/"}
+    return {
+        "success": True,
+        "post_id": post_id,
+        "url": "https://www.linkedin.com/feed/",
+    }

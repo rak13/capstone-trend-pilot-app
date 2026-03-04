@@ -38,7 +38,7 @@ const StepFinal = () => {
   const [currentPrediction, setCurrentPrediction] = useState<EngagementPrediction | null>(
     predictions.length > 0 ? predictions[predictions.length - 1] : null,
   );
-  const [predicting, setPredicting] = useState(predictions.length === 0);
+  const [predicting, setPredicting] = useState(true);
   const [predError, setPredError] = useState<string | null>(null);
 
   const runPrediction = (text: string) => {
@@ -51,7 +51,7 @@ const StepFinal = () => {
   };
 
   useEffect(() => {
-    if (predictions.length === 0 && finalPost) runPrediction(finalPost);
+    if (finalPost) runPrediction(finalPost);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [customPrompt, setCustomPrompt] = useState("");
