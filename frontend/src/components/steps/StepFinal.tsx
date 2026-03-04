@@ -17,7 +17,7 @@ const LI_SCOPE       = "openid profile w_member_social";
 
 const StepFinal = () => {
   const navigate = useNavigate();
-  const { finalPost, chosenTitle, predictions, followers, reset, setStep } = useWizardStore();
+  const { finalPost, chosenTitle, predictions, followers, selectedModel, reset, setStep } = useWizardStore();
   const { token, linkedinConnected, setLinkedIn, clearLinkedIn } = useAuthStore();
 
   const [editedPost, setEditedPost] = useState(finalPost ?? "");
@@ -38,7 +38,7 @@ const StepFinal = () => {
   const [currentPrediction, setCurrentPrediction] = useState<EngagementPrediction | null>(
     predictions.length > 0 ? predictions[predictions.length - 1] : null,
   );
-  const [predicting, setPredicting] = useState(predictions.length === 0);
+  const [predicting, setPredicting] = useState(true);
   const [predError, setPredError] = useState<string | null>(null);
 
   const runPrediction = (text: string) => {
@@ -51,7 +51,7 @@ const StepFinal = () => {
   };
 
   useEffect(() => {
-    if (predictions.length === 0 && finalPost) runPrediction(finalPost);
+    if (finalPost) runPrediction(finalPost);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [customPrompt, setCustomPrompt] = useState("");
@@ -111,7 +111,7 @@ const StepFinal = () => {
     setRefineLoading(true);
     setRefineError(null);
     try {
-      const refined = await fetchRefinePost(editedPost, refineInstruction.trim());
+      const refined = await fetchRefinePost(editedPost, refineInstruction.trim(), selectedModel);
       setEditedPost(refined);
       setDraftText(refined);
       setRefineInstruction("");
@@ -337,15 +337,25 @@ const StepFinal = () => {
           )}
 
           {linkedinPostUrl && (
-            <a
-              href={linkedinPostUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
-                bg-[#0A66C2] text-white hover:bg-[#0A66C2]/90 transition-all"
-            >
-              <ExternalLink className="w-4 h-4" /> View on LinkedIn
-            </a>
+            <div className="flex items-center gap-2">
+              <a
+                href={linkedinPostUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2.5 px-6 py-3 rounded-lg text-base font-medium
+                  bg-[#0A66C2] text-white hover:bg-[#0A66C2]/90 transition-all"
+              >
+                <ExternalLink className="w-4 h-4" /> View on LinkedIn
+              </a>
+              <button
+                onClick={() => setLinkedinPostUrl(null)}
+                title="Post again"
+                className="p-3 rounded-lg border border-border/60 text-muted-foreground
+                  hover:text-foreground hover:bg-white/5 transition-all"
+              >
+                <RotateCw className="w-4 h-4" />
+              </button>
+            </div>
           )}
         </div>
 
