@@ -14,9 +14,10 @@ from openai import OpenAI
 CACHE_FILE = "trend_cache.json"
 CACHE_TTL_DAYS = 7
 GEO = "US"
-TIMEFRAME = "today 3-m"   # last 3 months
+TIMEFRAME = "today 3-m"  # last 3 months
 
 client = OpenAI()  # reads OPENAI_API_KEY from env
+
 
 # CACHE HANDLING
 def load_cache():
@@ -25,16 +26,19 @@ def load_cache():
     with open(CACHE_FILE, "r") as f:
         return json.load(f)
 
+
 def save_cache(cache):
     with open(CACHE_FILE, "w") as f:
         json.dump(cache, f, indent=2)
+
 
 def is_cache_valid(entry_timestamp):
     cached_time = datetime.fromisoformat(entry_timestamp)
     return datetime.now(timezone.utc) - cached_time < timedelta(days=CACHE_TTL_DAYS)
 
+
 # LLM TOPIC EXTRACTION
-def extract_topics_llm(profile_text, model="gpt-5"):
+def extract_topics_llm(profile_text, model="gpt-5-mini"):
     prompt = f"""
 You are analyzing a LinkedIn professional bio.
 
@@ -65,9 +69,15 @@ LinkedIn Bio:
     )
 
     import re
+
     msg = response.choices[0].message
-    logger.info("%s finish_reason: %s | refusal: %s | content: %r", model,
-                response.choices[0].finish_reason, getattr(msg, "refusal", None), msg.content)
+    logger.info(
+        "%s finish_reason: %s | refusal: %s | content: %r",
+        model,
+        response.choices[0].finish_reason,
+        getattr(msg, "refusal", None),
+        msg.content,
+    )
     topics_text = msg.content or ""
     # Normalise: strip numbered prefixes (e.g. "1. ", "- "), then split on commas or newlines
     cleaned = re.sub(r"^\s*[\d\-\*\•]+[\.\)]\s*", "", topics_text, flags=re.MULTILINE)
@@ -75,6 +85,7 @@ LinkedIn Bio:
     topics = [t.strip() for t in raw_items if len(t.strip()) > 2]
     logger.info("Parsed topics: %s", topics)
     return list(set(topics))  # deduplicate
+
 
 # GOOGLE TRENDS FETCH
 def fetch_trend_data(keyword):
@@ -84,7 +95,9 @@ def fetch_trend_data(keyword):
 
     # Trend score
     df = pytrends.interest_over_time()
-    score = float(df[keyword].mean()) if (not df.empty and keyword in df.columns) else 0.0
+    score = (
+        float(df[keyword].mean()) if (not df.empty and keyword in df.columns) else 0.0
+    )
 
     # Related queries (same payload, no extra build_payload call)
     related = pytrends.related_queries()
@@ -108,8 +121,9 @@ def fetch_trend_data(keyword):
 
     return score, top_queries, rising_queries
 
+
 # TREND SCORING PIPELINE
-def get_trending_topics(profile_text, model="gpt-5"):
+def get_trending_topics(profile_text, model="gpt-5-mini"):
     cache = load_cache()
     extracted_topics = extract_topics_llm(profile_text, model=model)
 
@@ -118,7 +132,11 @@ def get_trending_topics(profile_text, model="gpt-5"):
     for topic in extracted_topics:
         cache_entry = cache.get(topic)
 
-        if cache_entry and is_cache_valid(cache_entry["timestamp"]) and cache_entry.get("top_queries") is not None:
+        if (
+            cache_entry
+            and is_cache_valid(cache_entry["timestamp"])
+            and cache_entry.get("top_queries") is not None
+        ):
             score = cache_entry["score"]
             top_queries = cache_entry.get("top_queries", [])
             rising_queries = cache_entry.get("rising_queries", [])
@@ -129,7 +147,7 @@ def get_trending_topics(profile_text, model="gpt-5"):
                     "score": score,
                     "top_queries": top_queries,
                     "rising_queries": rising_queries,
-                    "timestamp": datetime.now(timezone.utc).isoformat()
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 }
                 time.sleep(2)  # rate-limit safety
             except Exception as e:
@@ -138,26 +156,33 @@ def get_trending_topics(profile_text, model="gpt-5"):
                 top_queries = []
                 rising_queries = []
 
-        results.append({
-            "topic": topic,
-            "trend_score": score,
-            "top_queries": top_queries,
-            "rising_queries": rising_queries,
-        })
+        results.append(
+            {
+                "topic": topic,
+                "trend_score": score,
+                "top_queries": top_queries,
+                "rising_queries": rising_queries,
+            }
+        )
 
     save_cache(cache)
 
     if not results:
-        return pd.DataFrame(columns=["topic", "trend_score", "top_queries", "rising_queries"])
+        return pd.DataFrame(
+            columns=["topic", "trend_score", "top_queries", "rising_queries"]
+        )
 
     df = pd.DataFrame(results)
     df = df.sort_values("trend_score", ascending=False).reset_index(drop=True)
     return df
 
+
 # LLM POST TOPIC SELECTION
-def select_post_topic(trending_df, profile_text, chosen_topic=None, model="gpt-5"):
+def select_post_topic(trending_df, profile_text, chosen_topic=None, model="gpt-5-mini"):
     if chosen_topic:
-        top_topics = trending_df[trending_df["topic"] == chosen_topic].to_dict(orient="records")
+        top_topics = trending_df[trending_df["topic"] == chosen_topic].to_dict(
+            orient="records"
+        )
     else:
         top_topics = trending_df.head(5).to_dict(orient="records")
 
@@ -175,7 +200,11 @@ def select_post_topic(trending_df, profile_text, chosen_topic=None, model="gpt-5
 
         if rising_q:
             rising_str = ", ".join(
-                f"{q['query']} (+{q['value']}%)" if not isinstance(q['value'], str) else f"{q['query']} (Breakout)"
+                (
+                    f"{q['query']} (+{q['value']}%)"
+                    if not isinstance(q["value"], str)
+                    else f"{q['query']} (Breakout)"
+                )
                 for q in rising_q[:5]
             )
             part += f"\n  Rising/breakout searches: {rising_str}"
@@ -319,6 +348,7 @@ Perfect for production RAG systems, chatbots, and any application making high-vo
 
     return response.choices[0].message.content.strip()
 
+
 # DISPLAY HELPERS
 def display_top_topics(trending_df, n=5):
     """Display top N trending topics with related queries."""
@@ -335,7 +365,11 @@ def display_top_topics(trending_df, n=5):
 
         if rising_q:
             rising_str = ", ".join(
-                f"{q['query']} (+{q['value']}%)" if q['value'] != "Breakout" else f"{q['query']} (Breakout)"
+                (
+                    f"{q['query']} (+{q['value']}%)"
+                    if q["value"] != "Breakout"
+                    else f"{q['query']} (Breakout)"
+                )
                 for q in rising_q[:5]
             )
             print(f"     Rising searches: {rising_str}")
@@ -354,7 +388,11 @@ if __name__ == "__main__":
 
         print(f"\n  0. Let AI pick the best topic automatically")
         print(f"  q. Quit")
-        choice = input("\nChoose a topic number (1-5), 0 for AI pick, or q to quit: ").strip().lower()
+        choice = (
+            input("\nChoose a topic number (1-5), 0 for AI pick, or q to quit: ")
+            .strip()
+            .lower()
+        )
 
         if choice == "q":
             print("\nGoodbye!")
@@ -368,5 +406,7 @@ if __name__ == "__main__":
             print("\nLetting AI pick the best topic...")
 
         print("\n--- LLM Recommendation ---\n")
-        recommendation = select_post_topic(trending_df, linkedin_bio, chosen_topic=chosen_topic)
+        recommendation = select_post_topic(
+            trending_df, linkedin_bio, chosen_topic=chosen_topic
+        )
         print(recommendation)

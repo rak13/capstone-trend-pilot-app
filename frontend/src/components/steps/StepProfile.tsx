@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowRight, User, Users, Cpu } from "lucide-react";
 
 const MODEL_OPTIONS = [
-  { value: "gpt-5",  label: "GPT-5" },
-  { value: "gpt-4o", label: "GPT-4o" },
+  { value: "gpt-5-mini", label: "GPT-5 Mini" },
+  { value: "gpt-4o",     label: "GPT-4o" },
 ];
 
 const StepProfile = () => {
