@@ -40,7 +40,7 @@ def is_cache_valid(entry_timestamp):
 # LLM TOPIC EXTRACTION
 def extract_topics_llm(profile_text, model="gpt-5-mini"):
     prompt = f"""
-You are analyzing a LinkedIn professional bio.
+You are analyzing a user professional interest.
 
 Extract 8–12 specific, post-worthy technical topics suitable for LinkedIn.
 Only include:
@@ -58,7 +58,10 @@ Exclude:
 
 Return the result as a comma-separated list.
 
-LinkedIn Bio:
+Important:
+-You must include the users original topics in the final response.
+
+professional interest:
 {profile_text}
 """
 

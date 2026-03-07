@@ -462,14 +462,16 @@ def refine_post(req: RefinePostRequest):
         "and all LinkedIn constraints. Return only the revised post text — no commentary."
     )
     user_prompt = f"Existing post:\n{req.post_text}\n\nInstruction:\n{req.instruction}"
+    is_reasoning_model = req.model.startswith("o1") or req.model.startswith("o3") or req.model.startswith("o4")
+    extra_kwargs = {"reasoning_effort": "low"} if is_reasoning_model else {}
     try:
         response = client.chat.completions.create(
             model=req.model,
-            reasoning_effort="low",
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user_prompt},
             ],
+            **extra_kwargs,
         )
     except Exception as e:
         logger.exception("Post refinement failed")
